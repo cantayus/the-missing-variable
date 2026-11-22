@@ -126,12 +126,22 @@ class Mask {
 
 // ---------- a batch: many small shapes baked into one mesh with vertex colors and a wind sway ----------
 export class Batch {
-  constructor() { this.pos = []; this.col = []; this.flex = []; this._c = new THREE.Color(); this._v = new THREE.Vector3(); }
+  constructor() { this.pos = []; this.col = []; this.flex = []; this._c = new THREE.Color(); this._v = new THREE.Vector3(); this.owner = null; this.spans = []; }
   add(geo, m4, color, flex = 0, jitter = 0, r = null) {
     const p = geo.attributes.position, c = this._c.set(color), v = this._v;
     if (jitter && r) c.offsetHSL(r.range(-0.012, 0.012), r.range(-0.04, 0.04), r.range(-jitter, jitter));
-    const top = flex < 0; // negative flex: sway grows with height inside the shape
+    const top = flex < 0, from = this.flex.length; // negative flex: sway grows with height inside the shape
     for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const ly = v.y; v.applyMatrix4(m4); this.pos.push(v.x, v.y, v.z); this.col.push(c.r, c.g, c.b); this.flex.push(top ? -flex * Math.max(0, ly + 0.5) : flex); }
+    if (this.owner) this.spans.push([this.owner, from, this.flex.length]);
+  }
+  // take out everything that belongs to the plants `gone(owner)` picks; returns how many plants went
+  drop(gone) {
+    const cut = new Set(this.spans.filter(([o]) => gone(o)).map(([o]) => o)); if (!cut.size) return 0;
+    const n = this.flex.length, kill = new Uint8Array(n); for (const [o, a, b] of this.spans) if (cut.has(o)) kill.fill(1, a, b);
+    const at = new Int32Array(n + 1), pos = [], col = [], flex = [];
+    for (let i = 0; i < n; i++) { at[i] = flex.length; if (kill[i]) continue; pos.push(this.pos[3 * i], this.pos[3 * i + 1], this.pos[3 * i + 2]); col.push(this.col[3 * i], this.col[3 * i + 1], this.col[3 * i + 2]); flex.push(this.flex[i]); }
+    at[n] = flex.length; this.pos = pos; this.col = col; this.flex = flex;
+    this.spans = this.spans.filter(([o]) => !cut.has(o)).map(([o, a, b]) => [o, at[a], at[b]]); return cut.size;
   }
   mesh(wind) {
     if (!this.pos.length) return null;
@@ -156,7 +166,7 @@ export class Kit {
   constructor(group, { season = 'fall', seed = 'place', gfx = 2, wind = { value: 0 } } = {}) {
     this.g = group; this.season = SEASONS[season]; this.seasonName = season; this.r = new RNG(seed); this.gfx = gfx; this.wind = wind;
     this.anim = []; this.obstacles = []; this.windowMats = []; this.labels = []; this.picks = []; this.spots = [];
-    this.npcs = []; this.fauna = []; this.treeSpots = []; this.lampMats = []; this.waterAreas = [];
+    this.npcs = []; this.fauna = []; this.treeSpots = []; this.lampMats = []; this.waterAreas = []; this.tracks = [];
     this.veg = new Batch(); this.own = [];
     this.door = { x: 0, z: 10 }; this.spawn = { x: 0, z: 22 }; this.size = 60; this.mask = new Mask(60);
     this.player = { x: 0, z: 0 }; this.weather = null; this.tags = [];
@@ -335,11 +345,16 @@ export class Kit {
   put(geo, x, y, z, sx, sy, sz, color, flex = 0, rx = 0, ry = 0, rz = 0, jitter = 0.035) { this.veg.add(geo, TRS(x, y, z, sx, sy, sz, rx, ry, rz), color, flex, jitter, this.r); }
   // kinds: round, cone, palm, blossom, bush, willow, birch, cypress, gum, scrub, bare
   tree(x, z, kind = 'round', s = 1, o = {}) {
+    const low = kind === 'bush' || kind === 'scrub', own = (o.y || 0) < 1 ? { x, z, low } : null;
+    if (own && this.inWay(own)) return STUB;
+    const was = this.veg.owner; this.veg.owner = own; try { return this._tree(x, z, kind, s, o, own); } finally { this.veg.owner = was; }
+  }
+  _tree(x, z, kind, s, o, own) {
     const r = this.r, y0 = o.y || 0, S = this.seasonName, winter = S === 'winter', pal = o.colors;
     if (kind === 'blossom' && S !== 'spring') kind = 'round';
     if (kind === 'round' && winter && !pal) kind = 'bare';
     const trunk = (h, rad, col = C.bark, lean = 0) => this.put(cylGeo(), x + lean * h * 0.5, y0 + h / 2, z, rad, h, rad, col, 0.03, 0, r.u() * 3, -lean);
-    if (y0 < 1) { this.treeSpots.push({ x, z, kind, s }); this.obstacles.push({ x0: x - 0.3, x1: x + 0.3, z0: z - 0.3, z1: z + 0.3 }); }
+    if (y0 < 1) { this.treeSpots.push({ x, z, kind, s, own }); this.obstacles.push({ x0: x - 0.3, x1: x + 0.3, z0: z - 0.3, z1: z + 0.3, own }); }
     if (kind === 'cone') {
       const h = 0.8 * s; trunk(h, 0.2 * s);
       const tiers = 5, base = pal ? r.pick(pal) : this.season.conifer;
@@ -415,6 +430,7 @@ export class Kit {
     for (const dz of [-0.3, 0.3]) for (const dx of [-1, 1]) { const wh = new THREE.Mesh(G('wheel6', () => new THREE.CylinderGeometry(1, 1, 1, 8).rotateZ(Math.PI / 2)), M(0x2a2e36)); wh.scale.set(0.16, Math.min(0.34, y + 0.05), Math.min(0.34, y + 0.05)); wh.position.set(dx * w * 0.5, Math.min(0.34, y + 0.05), dz * len); g.add(wh); }
     this.g.add(g);
     const [a, bb] = pathPts, L = Math.hypot(bb[0] - a[0], bb[1] - a[1]); let u = this.r.u(), dir = 1, wait = 0, v = 0;
+    this.track(a[0], a[1], bb[0], bb[1], w / 2 + 0.25, false);
     g.rotation.y = Math.atan2(bb[0] - a[0], bb[1] - a[1]);
     this.anim.push((t, dt) => { if (wait > 0) { wait -= dt; v = 0; return; } const edge = Math.min(u, 1 - u) * L; v += (Math.min(speed, 1.2 + edge * 0.9) - v) * Math.min(1, dt * 2); u += dir * v * dt / L; if (u > 1 || u < 0) { u = Math.max(0, Math.min(1, u)); dir *= -1; wait = pause; } g.position.set(a[0] + (bb[0] - a[0]) * u, 0, a[1] + (bb[1] - a[1]) * u); });
     return g;
@@ -463,6 +479,7 @@ export class Kit {
       if (Math.abs(x) > e || Math.abs(z) > e) continue;
       const v = this.mask.get(x, z); if (!(Array.isArray(kind) ? kind.includes(v) : v === kind)) continue;
       if (kind !== WATER && (this.mask.near(x, z, BUILT, 1.4) || this.mask.near(x, z, WATER, 1.0))) continue;
+      if (kind !== WATER && this.onTrack(x, z, 3, 1)) continue;
       if (kind === WATER && (this.mask.get(x + 1, z) !== WATER || this.mask.get(x - 1, z) !== WATER || this.mask.get(x, z + 1) !== WATER || this.mask.get(x, z - 1) !== WATER)) continue;
       if (this._used.some((u) => Math.hypot(u[0] - x, u[1] - z) < apart)) continue;
       this._used.push([x, z]); return [x, z];
@@ -470,6 +487,22 @@ export class Kit {
     return null;
   }
   blocked(x, z) { for (const o of this.obstacles) if (!o.soft && x > o.x0 && x < o.x1 && z > o.z0 && z < o.z1) return true; return false; }
+  // ----- railway lines and the ways vehicles run along: nothing is planted on them -----
+  track(x1, z1, x2, z2, half = 1.1, rail = true) {
+    this.tracks.push({ x1, z1, x2, z2, half, rail });
+    if (rail) this.mask.rect((x1 + x2) / 2, (z1 + z2) / 2, half * 2 + 2.4, Math.hypot(x2 - x1, z2 - z1) + 2, Math.atan2(x2 - x1, z2 - z1), PAVED);   // a bare verge, so ground cover stays off the sleepers
+    return this;
+  }
+  onTrack(x, z, pad = 0, padRoad = pad) {
+    for (const t of this.tracks) { const dx = t.x2 - t.x1, dz = t.z2 - t.z1, L2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((x - t.x1) * dx + (z - t.z1) * dz) / L2)); if (Math.hypot(x - t.x1 - dx * u, z - t.z1 - dz * u) < t.half + (t.rail ? pad : padRoad)) return true; }
+    return false;
+  }
+  inWay(own) { return this.tracks.length > 0 && this.onTrack(own.x, own.z, own.low ? 1.0 : 1.7, own.low ? 0.4 : 0.9); }
+  // trees planted before a line was laid across them come out again
+  clearTracks() {
+    if (!this.tracks.length) return 0; const gone = (own) => this.inWay(own), n = this.veg.drop(gone);
+    this.treeSpots = this.treeSpots.filter((t) => !(t.own && gone(t.own))); this.obstacles = this.obstacles.filter((o) => !(o.own && gone(o.own))); return n;
+  }
   // called once the recipe is done
   finish() { const m = this.veg.mesh(this.wind); if (m) this.g.add(m); return this; }
 }

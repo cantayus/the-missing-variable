@@ -95,7 +95,7 @@ export function loadPlace(recipe, { season = 'fall', hour = 9, seed = 'x', az, p
   disposeGroup(W.world); disposeGroup(W.actors); W.markers = []; W.goal = null; W.onArrive = null; W.held = null;
   W.season = season;
   const kit = new Kit(W.world, { season, seed, gfx: W.gfx, wind: W.wind }); kit.tags = tags; W.kit = kit;
-  recipe(kit, flags);
+  recipe(kit, flags); kit.clearTracks();
   scatter(kit); airborne(kit); kit.finish();
   if (W.gfx > 0) kit.clouds(W.gfx === 2 ? 6 : 3);
   setHour(hour);
@@ -108,8 +108,9 @@ export function loadPlace(recipe, { season = 'fall', hour = 9, seed = 'x', az, p
   return kit;
 }
 function makeStudent(kit) {
-  const p = makePerson(kit, { kind: 'adult', top: 0x24406e, pack: true, scale: 1.04 });
-  const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.07, 5, 10).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd24d3e, flatShading: true })); scarf.position.y = 1.15; p.g.add(scarf);
+  const p = makePerson(kit, { kind: 'adult', top: 0x24406e, pack: true, scale: 1.04, hat: false });
+  const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.06, 5, 10).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd24d3e, flatShading: true })); scarf.position.y = 1.275; scarf.scale.z = 0.72; p.g.add(scarf);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.3, 0.035), scarf.material); tail.position.set(0.07, 1.12, 0.125); tail.rotation.z = -0.12; p.g.add(tail);
   return p;
 }
 function makeFolio() {
@@ -123,8 +124,8 @@ function makeFolio() {
   return g;
 }
 function makeWren(kit) {
-  const p = makePerson(kit, { kind: 'child', top: 0xe2b23a, pack: false });
-  const hat = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0xc0503f, flatShading: true })); hat.position.y = 1.62; p.g.add(hat);
+  const p = makePerson(kit, { kind: 'child', top: 0xe2b23a, pack: false, hat: false });
+  const hat = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0xc0503f, flatShading: true })); hat.position.y = 1.75; p.g.add(hat);
   return p;
 }
 
@@ -140,13 +141,13 @@ export function setMarkers(list) {
   W.markers = [];
   for (const d of list) {
     const g = new THREE.Group(); g.position.set(d.x, 0, d.z);
-    const col = d.type === 'door' ? 0x7fd8f5 : d.type === 'sample' ? 0xf2c14e : d.type === 'talk' ? 0xf4f2ec : 0xcc79a7, big = d.type === 'door';
+    const col = d.type === 'door' ? 0x7fd8f5 : d.type === 'sample' ? 0xf2c14e : d.type === 'talk' ? 0xf4f2ec : d.type === 'travel' ? 0xff8a3d : 0xcc79a7, big = d.type === 'door' || d.type === 'travel';
     const mat = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 });
     const ring = new THREE.Mesh(new THREE.TorusGeometry(big ? 1.2 : 0.55, 0.07, 6, 24).rotateX(Math.PI / 2), mat); ring.position.y = 0.1; g.add(ring);
     const gem = new THREE.Mesh(new THREE.OctahedronGeometry(big ? 0.42 : 0.24), mat); gem.position.y = big ? 3.4 : 2.3; g.add(gem);
     const hit = new THREE.Mesh(new THREE.CylinderGeometry(big ? 1.6 : 1.1, big ? 1.6 : 1.1, 4, 8), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 2; g.add(hit);
     hit.userData.pick = d; W.actors.add(g); W.markers.push({ obj: g, gem, ring, d, hit, y0: gem.position.y });
-    if (d.label) { const n = el('div.wlabel.marker', d.label); W.labelsEl.append(n); W.labelNodes.push({ n, p: new THREE.Vector3(d.x, big ? 4.6 : 3.2, d.z), kind: 'marker', marker: g }); }
+    if (d.label) { const n = el('div.wlabel.marker' + (d.type === 'travel' ? '.travel' : d.type === 'door' ? '.door' : ''), d.label); W.labelsEl.append(n); W.labelNodes.push({ n, p: new THREE.Vector3(d.x, big ? 4.6 : 3.2, d.z), kind: 'marker', marker: g }); }
   }
 }
 export function removeMarker(pred) {
@@ -164,9 +165,10 @@ export function kitNow() { return W.kit; }
 export function avatarPos() { return W.avatar ? { x: W.avatar.position.x, z: W.avatar.position.z } : { x: 0, z: 0 }; }
 export function release(npc) { if (npc) npc.paused = false; if (W.held === npc) W.held = null; }
 
-export function walkTo(x, z, then) {
+// `sure`: run `then` even if something is in the way and the walk stops short
+export function walkTo(x, z, then, sure = false) {
   if (!W.avatar) return; const lim = (W.kit?.size ?? 60) / 2 - 1.2;
-  W.goal = { x: clamp(x, -lim, lim), z: clamp(z, -lim, lim) }; W.onArrive = then || null; W.stuck = 0;
+  W.goal = { x: clamp(x, -lim, lim), z: clamp(z, -lim, lim) }; W.onArrive = then || null; W.sure = sure; W.by = performance.now() + 4000; W.stuck = 0;
 }
 
 function pickAt(e) {
@@ -194,8 +196,10 @@ function bindInput(c) {
 }
 function approach(d, at, stop) {
   const a = W.avatar.position, dx = at.x - a.x, dz = at.z - a.z, L = Math.hypot(dx, dz) || 1;
-  walkTo(at.x - (dx / L) * stop, at.z - (dz / L) * stop, () => W.handlers.onPick && W.handlers.onPick(d));
+  walkTo(at.x - (dx / L) * stop, at.z - (dz / L) * stop, () => W.handlers.onPick && W.handlers.onPick(d), !d.npc && !d.animal);   // a marker always answers, a creature only when reached
 }
+// walk the student to one of the markers and do what a click on it would do
+export function walkToMark(d) { if (!W.avatar || !d) return false; if (W.held) { W.held.paused = false; W.held = null; } approach(d, d, d.type === 'door' ? 1.0 : 1.3); return true; }
 function click(e) {
   if (!W.handlers.active || !W.handlers.active()) return;
   if (W.held) { W.held.paused = false; W.held = null; }
@@ -260,7 +264,9 @@ function loop(now) {
   if (W.avatar && W.goal) {
     const res = stepActor(W.avatar, W.goal.x, W.goal.z, 7.5, dt, 0.12); walking = res === 0;
     if (res === -1) W.stuck += dt; else W.stuck = Math.max(0, W.stuck - dt);
-    if (res === 1 || W.stuck > 0.5) { const close = res === 1 || Math.hypot(W.goal.x - W.avatar.position.x, W.goal.z - W.avatar.position.z) < 9; W.goal = null; W.stuck = 0; const f = W.onArrive; W.onArrive = null; if (f && close) f(); else if (W.held) { W.held.paused = false; W.held = null; } }
+    const late = W.sure && W.onArrive && performance.now() > W.by;   // a slow machine should not keep anyone waiting for a door
+    if (late && !blocked(W.goal.x, W.goal.z)) W.avatar.position.set(W.goal.x, 0, W.goal.z);
+    if (res === 1 || W.stuck > 0.5 || late) { const close = res === 1 || Math.hypot(W.goal.x - W.avatar.position.x, W.goal.z - W.avatar.position.z) < 9; W.goal = null; W.stuck = 0; const f = W.onArrive; W.onArrive = null; if (f && (close || W.sure)) f(); else if (W.held) { W.held.paused = false; W.held = null; } }
   }
   if (W.student) { W.stride = (W.stride || 0) + (walking ? dt * 11 : 0); stride(W.student, W.stride, walking ? 0.6 : 0); W.avatar.position.y = walking ? Math.abs(Math.sin(W.stride)) * 0.05 : 0; }
   if (W.avatar) {

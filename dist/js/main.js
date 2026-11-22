@@ -2,7 +2,8 @@
 import { el, clear, bus } from './core/util.js';
 import { S, save, reset, load } from './core/save.js';
 import { RNG, hash } from './core/rng.js';
-import { initWorld, loadPlace, setMarkers, removeMarker, onWorld, setAuto, setMotion, setView, worldOK, kitNow, release, pickNearest, snapshot, setSmooth } from './engine/scene.js';
+import { initWorld, loadPlace, setMarkers, removeMarker, onWorld, setAuto, setMotion, setView, worldOK, kitNow, release, pickNearest, snapshot, setSmooth, walkToMark } from './engine/scene.js';
+import { WATER, BUILT } from './engine/kit.js';
 import { RECIPES, TAGS } from './engine/dioramas.js';
 import { PLACES } from './content/places.js';
 import { SESSIONS, SESSION, PARTS, FIELD, sessionsAt } from './content/sessions.js';
@@ -13,6 +14,7 @@ import { stateOf, isDone, seasonNow, challengeOpen, finaleOpen, coreLeft, counts
 import { showTitle, hideTitle, sheet, toast, introLetter, alsoPlay, family, credits, howTo, sources, options } from './ui/pages.js';
 import { initTablet, openTablet, closeTablet, tabletOpen } from './ui/tablet.js';
 import { openMap, closeMap } from './ui/map.js';
+import { stepsPanel } from './ui/steps.js';
 import { sitIn, workbench } from './ui/session.js';
 import { talkNpc, talkHome, noteAnimal, findEgg, closeTalk } from './ui/talk.js';
 import { octavoChat } from './ui/octavo.js';
@@ -38,6 +40,7 @@ function enterPlace(id, o = {}) {
   if (worldOK()) { loadPlace(RECIPES[id], { season: seasonNow(), hour, seed: id, tags: TAGS[id] || [], flags: { finale: !!s.finale?.done }, companions: { folio: true, wren: !!s.wren && id !== 'deckle' } }); setAuto(false); }
   setPatch(id === 'deckle' ? 'home' : seasonNow()); refresh();
   if (!o.quiet) toast(PLACES[id].full + '. ' + PLACES[id].blurb, 5200);
+  if (!o.quiet && !s.intro.marks) { s.intro.marks = 1; save(); setTimeout(() => active() && toast('Blue marker: a session to sit in on. Orange marker: travel. The list on the left always has your next step.', 9000), 5600); }
   if (id !== 'deckle' && s.part >= 3 && G.visit === 1 && Object.keys(s.intro).length % 5 === 0) setTimeout(() => active() && toast(FOLIO_LATE[Math.min(FOLIO_LATE.length - 1, s.part - 3 + (s.finale ? 1 : 0))], 7000), 6000);
 }
 function doors() { const k = worldOK() ? kitNow() : null, all = sessionsAt(G.place); if (k?.rooms) return k.rooms.map((r) => ({ x: r.x, z: r.z, label: r.label, ids: r.ids })); return all.length ? [{ x: k?.door?.x ?? 0, z: k?.door?.z ?? 0, label: G.place === 'deckle' ? 'Session room' : 'Session room', ids: all.map((x) => x.id) }] : []; }
@@ -46,14 +49,22 @@ function refresh() {
   for (const d of doors()) { const ss = d.ids.map((i) => SESSION[i]).filter(Boolean); if (ss.some((x) => stateOf(x.id) !== 'locked')) marks.push({ type: 'door', x: d.x, z: d.z, label: ss.some((x) => stateOf(x.id) === 'open') ? d.label : d.label + ' ✓', ids: d.ids }); }
   if (k) { k.spots.forEach((sp, i) => { if (!G.taken.has(i) && G.taken.size < 8) marks.push({ type: 'sample', x: sp.x, z: sp.z, zone: sp.zone, i }); });
     if (G.place === 'deckle' && k.points) { const P = k.points; marks.push({ type: 'home', x: P.room.x, z: P.room.z, label: 'Your room' }); for (const who of ['odile', 'tomas', 'pip', 'librarian', 'cameo']) marks.push({ type: 'talk', x: P[who].x, z: P[who].z, who, label: who === 'cameo' ? null : { odile: 'Odile', tomas: 'Tomas', pip: 'Pip', librarian: 'Ines Varga' }[who] }); marks.push({ type: 'talk', x: P.librarian.x + 2.2, z: P.librarian.z + 1.6, who: 'engineer', label: 'Dov' }); if (!S().wren) marks.push({ type: 'talk', x: P.room.x - 1.8, z: P.room.z + 2.2, who: 'wren', label: 'Wren' }); }
+    marks.push({ type: 'travel', ...travelSpot(k, marks), label: 'Travel' });
     setMarkers(marks); }
   G.marks = marks; hud();
 }
+// Where the travel marker stands: by the platform at Deckle, a few steps from where you arrive anywhere else.
+function travelSpot(k, marks) {
+  if (G.place === 'deckle') return { x: 0.5, z: 18.4 };
+  const s = k.spawn, lim = (k.size ?? 60) / 2 - 2.5, free = (x, z) => Math.abs(x) < lim && Math.abs(z) < lim && !k.blocked(x, z) && ![WATER, BUILT].includes(k.mask.get(x, z)) && !marks.some((m) => Math.hypot(m.x - x, m.z - z) < 3.2);
+  for (const r of [3.6, 5, 2.6, 6.5]) for (const a of [90, 45, 135, 0, 180, -45, -135, -90]) { const x = s.x + r * Math.cos(a * Math.PI / 180), z = s.z + r * Math.sin(a * Math.PI / 180); if (free(x, z)) return { x, z }; }
+  return { x: s.x, z: s.z };
+}
 function hud() {
-  document.getElementById('hud-place')?.remove(); document.getElementById('hud-btns')?.remove(); document.getElementById('fallback')?.remove(); if (!G.place) return;
+  document.getElementById('hud-left')?.remove(); document.getElementById('hud-btns')?.remove(); document.getElementById('fallback')?.remove(); if (!G.place) return;
   const p = PLACES[G.place], here = sessionsAt(G.place), open = here.filter((x) => stateOf(x.id) === 'open').length, F = FIELD[G.place];
-  ui.append(el('div#hud-place.panel', [el('b', p.name), el('span', `Part ${PARTS[S().part].roman} · ${seasonNow()}` + (here.length ? ` · ${open ? open + ' session' + (open > 1 ? 's' : '') + ' open here' : 'all done here'}` : '')), F && G.samples.length ? el('span', { style: { display: 'block' } }, `Counted: ${G.samples.map((o) => o.v).join(', ')} ${F[1]}`) : null]));
-  ui.append(el('div#hud-btns', [el('button.btn', { onclick: () => openTablet(), title: 'T' }, 'Tablet'), el('button.btn', { onclick: showMap, title: 'M' }, 'Map'), worldOK() ? el('button.btn', { onclick: postcard, title: 'C' }, 'Camera') : null, el('button.btn.quiet', { onclick: toTitle }, 'Menu')]));
+  ui.append(el('div#hud-left', [el('div#hud-place.panel', [el('b', p.name), el('span', `Part ${PARTS[S().part].roman} · ${seasonNow()}` + (here.length ? ` · ${open ? open + ' session' + (open > 1 ? 's' : '') + ' open here' : 'all done here'}` : '')), F && G.samples.length ? el('span', { style: { display: 'block' } }, `Counted: ${G.samples.map((o) => o.v).join(', ')} ${F[1]}`) : null]), stepsPanel(G.place, doStep, hud)]));
+  ui.append(el('div#hud-btns', [el('button.btn', { onclick: () => openTablet(), title: 'Open your tablet (T)' }, 'Tablet'), el('button.btn.go', { onclick: () => showMap(), title: 'Open the map (M)' }, 'Travel'), worldOK() ? el('button.btn', { onclick: postcard, title: 'Frame a postcard (C)' }, 'Camera') : null, el('button.btn.quiet', { onclick: toTitle }, 'Menu')]));
   if (!worldOK()) fallback();
 }
 // without WebGL the places are lists; everything else works
@@ -61,7 +72,15 @@ function fallback() {
   const box = el('div#fallback.panel', { style: { position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(34rem, 92vw)', padding: '1rem 1.2rem' } }, [el('h2', PLACES[G.place].full), el('p', PLACES[G.place].blurb), el('p.note', 'This browser cannot draw the 3D view, so the place is shown as a list. Sessions, the tablet and the map all work.')]);
   for (const m of G.marks || []) { if (m.type === 'door') box.append(el('div.row', { style: { margin: '4px 0' } }, el('button.btn.go', { onclick: () => onPick(m) }, 'Go in: ' + m.label))); else if (m.type === 'talk' && m.label) box.append(el('div.row', { style: { margin: '4px 0' } }, el('button.btn.quiet', { onclick: () => onPick(m) }, 'Talk to ' + m.label))); else if (m.type === 'home') box.append(el('div.row', { style: { margin: '4px 0' } }, el('button.btn.quiet', { onclick: () => onPick(m) }, 'Go up to your room'))); }
   if (FIELD[G.place] && G.samples.length < 8) box.append(el('div.row', { style: { marginTop: '6px' } }, [el('button.btn.quiet', { onclick: () => takeSample({ zone: 'a', i: 100 + G.samples.length }) }, 'Count on the busy side'), el('button.btn.quiet', { onclick: () => takeSample({ zone: 'b', i: 200 + G.samples.length }) }, 'Count on the quiet side')]));
+  box.append(el('div.row', { style: { marginTop: '6px' } }, el('button.btn.quiet', { onclick: () => showMap() }, 'Travel somewhere else')));
   ui.append(box);
+}
+// one of the steps in the list at the top left
+function doStep(a) {
+  if (a.kind === 'travel') return showMap(a.to);
+  const m = (G.marks || []).find((d) => (a.kind === 'door' ? d.type === 'door' && d.ids.includes(a.id) : d.type === 'talk' && d.who === 'librarian'));
+  if (!m) return a.kind === 'door' && SESSION[a.id] ? doorSheet({ label: 'Session room', ids: sessionsAt(G.place).map((x) => x.id) }) : showMap();
+  if (worldOK()) walkToMark(m); else onPick(m);
 }
 
 // ---- things the player can walk up to ----
@@ -72,8 +91,10 @@ function onPick(d) {
   else if (d.type === 'animal') noteAnimal(d.animal);
   else if (d.type === 'egg') findEgg(d.id);
   else if (d.type === 'home') homeRoom();
+  else if (d.type === 'travel') showMap();
   else if (d.type === 'talk') { const t = talkHome(d.who, stage()); if (!t) return;
     if (d.who === 'wren') t.btns.append(el('button.btn.go.small', { onclick: () => { S().wren = true; save(); closeTalk(); toast('Wren fetches her coat. She will come along, and can always be left at home from your room.'); refresh(); } }, 'Invite Wren along'));
+    if (d.who === 'tomas') t.btns.append(el('button.btn.go.small', { onclick: () => { closeTalk(); showMap(); } }, 'Where can I go?'));
     if (d.who === 'librarian' && finaleOpen() && !S().finale?.done) t.btns.append(el('button.btn.go.small', { onclick: () => { closeTalk(); runFinale(afterFinale); } }, 'The board is meeting'));
     if (d.who === 'librarian') [1, 2, 3].forEach((p) => { if (challengeOpen(p) && !S().challenges[p]) t.btns.append(el('button.btn.go.small', { onclick: () => { closeTalk(); runChallenge(p, afterChallenge); } }, 'Challenge ' + PARTS[p].roman)); }); }
 }
@@ -121,7 +142,7 @@ function homeRoom() {
 }
 
 // ---- map, camera, title ----
-function showMap() { closeTalk(); closeTablet(); openMap({ here: G.place || 'deckle', canCarriage: true, onTravel: (id, o) => { if (o.carriage) carriageProblem(() => enterPlace(id)); else enterPlace(id); } }); }
+function showMap(go = null) { closeTalk(); closeTablet(); openMap({ here: G.place || 'deckle', canCarriage: true, go: typeof go === 'string' ? go : null, onTravel: (id, o) => { if (o.carriage) carriageProblem(() => enterPlace(id)); else enterPlace(id); } }); }
 function postcard() {
   const full = snapshot(3840); if (!full) return; sfx('find');
   const small = document.createElement('canvas'), w = 520, h = Math.round((full.height / full.width) * w); small.width = w; small.height = h; small.getContext('2d').drawImage(full, 0, 0, w, h);
@@ -132,7 +153,7 @@ function postcard() {
   });
 }
 function toTitle() {
-  closeTalk(); closeTablet(); closeMap(); document.getElementById('hud-place')?.remove(); document.getElementById('hud-btns')?.remove(); document.getElementById('fallback')?.remove();
+  closeTalk(); closeTablet(); closeMap(); document.getElementById('hud-left')?.remove(); document.getElementById('hud-btns')?.remove(); document.getElementById('fallback')?.remove();
   if (worldOK()) { if (G.place !== 'deckle' || !kitNow()) loadPlace(RECIPES.deckle, { season: seasonNow(), hour: 17.2, seed: 'deckle', tags: TAGS.deckle, flags: { finale: !!S().finale?.done }, companions: { folio: true, wren: false } }); setMarkers([]); setAuto(true); setView({ az: 0.6, pol: 1.02, dist: 96 }); }
   G.place = null;
   showTitle({
@@ -162,5 +183,5 @@ applySettings(); countVisit();
 if (Q.has('place')) enterPlace(Q.get('place'), { quiet: true, hour: Q.has('hour') ? +Q.get('hour') : undefined }); else toTitle();
 if (Q.has('open') && SESSION[Q.get('open')]) workbench(SESSION[Q.get('open')], []);
 if (Q.has('sit') && SESSION[Q.get('sit')]) sitIn(SESSION[Q.get('sit')], { sample: [] }, afterSession);
-if (Q.has('page')) ({ credits, also: alsoPlay, family, howto: howTo, sources, tablet: () => openTablet(Q.get('tab') || 'case'), map: showMap, finale: () => runFinale(afterFinale), challenge: () => runChallenge(+Q.get('n') || 1, afterChallenge), room: homeRoom, carriage: () => carriageProblem(() => {}, Q.get('id')), octavo: () => octavoChat(), boss: () => runBoss(Q.get('id') || 'average', () => {}) })[Q.get('page')]?.();
+if (Q.has('page')) ({ credits, also: alsoPlay, family, howto: howTo, sources, tablet: () => openTablet(Q.get('tab') || 'case'), map: () => showMap(), finale: () => runFinale(afterFinale), challenge: () => runChallenge(+Q.get('n') || 1, afterChallenge), room: homeRoom, carriage: () => carriageProblem(() => {}, Q.get('id')), octavo: () => octavoChat(), boss: () => runBoss(Q.get('id') || 'average', () => {}) })[Q.get('page')]?.();
 window.__game = { G, S, enterPlace, onPick };

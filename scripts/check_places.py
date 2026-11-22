@@ -1,4 +1,4 @@
-# Dev helper: load every diorama in every season and report console errors and counts.
+# Dev helper: load every diorama in every season and report console errors, counts, and any tree left standing on a line.
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from shot import serve
@@ -19,9 +19,10 @@ with sync_playwright() as p:
             errs.clear()
             pg.goto(f'http://127.0.0.1:8767/gallery.html?place={pl}&season={se}&gfx=1')
             pg.wait_for_timeout(450)
-            info = pg.evaluate("window.__kit ? [window.__kit.npcs.length, window.__kit.fauna.length, window.__kit.g.children.length] : null")
+            info = pg.evaluate("window.__kit ? [window.__kit.npcs.length, window.__kit.fauna.length, window.__kit.g.children.length, window.__kit.tracks.length, window.__kit.treeSpots.filter(t => t.own && window.__kit.inWay(t.own)).length] : null")
             if errs or not info: bad += 1; print(pl, se, 'ERR', errs[:2])
-            elif se == seasons[0]: print(pl, 'npcs', info[0], 'fauna', info[1], 'objects', info[2])
+            elif info[4]: bad += 1; print(pl, se, 'TREES ON A LINE', info[4])   # nothing may grow on a railway or in the way of a tram
+            elif se == seasons[0]: print(pl, 'npcs', info[0], 'fauna', info[1], 'objects', info[2], 'lines', info[3])
     print('places', len(places), 'bad', bad)
     b.close()
 s.shutdown()

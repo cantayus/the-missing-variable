@@ -176,7 +176,7 @@ function dog(k, owner) { // on a lead beside its person
     const o = owner.g, fx = Math.sin(o.rotation.y), fz = Math.cos(o.rotation.y), tx = o.position.x + fz * side * 0.7 + fx * 0.5, tz = o.position.z - fx * side * 0.7 + fz * 0.5, dx = tx - g.position.x, dz = tz - g.position.z, L = Math.hypot(dx, dz), moving = L > 0.12;
     if (moving) { const st = Math.min(L, dt * 2.4); g.position.x += (dx / L) * st; g.position.z += (dz / L) * st; yaw += wrap(Math.atan2(dx, dz) - yaw) * Math.min(1, dt * 6); }
     g.rotation.y = yaw; const sw = moving ? Math.sin(t * 13 + ph) * 0.55 : 0; legs[0].rotation.x = sw; legs[3].rotation.x = sw; legs[1].rotation.x = -sw; legs[2].rotation.x = -sw; tail.rotation.y = Math.sin(t * 9) * 0.6; head.position.y = 0.42 + (moving ? 0 : Math.sin(t * 0.8 + ph) * 0.02);
-    const hx = o.position.x + fz * side * 0.3, hz = o.position.z - fx * side * 0.3, cx = g.position.x, cz = g.position.z, LL = Math.hypot(hx - cx, 0.6, hz - cz); lead.position.set((hx + cx) / 2, 0.68, (hz + cz) / 2); lead.scale.y = LL; lead.lookAt(hx, 0.98, hz); lead.rotateX(Math.PI / 2);
+    const hx = o.position.x + fz * side * 0.3, hz = o.position.z - fx * side * 0.3, cx = g.position.x, cz = g.position.z, LL = Math.hypot(hx - cx, 0.3, hz - cz); lead.position.set((hx + cx) / 2, 0.53, (hz + cz) / 2); lead.scale.y = LL; lead.lookAt(hx, 0.68, hz); lead.rotateX(Math.PI / 2);
   });
   return reg(k, g, 'dog', 0.7, { owner });
 }

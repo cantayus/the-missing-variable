@@ -52,3 +52,4 @@ II-3, II-6, II-12, III-4, III-5, III-6 (Twist), III-13, III-14, III-16, III-17, 
 3. A variation is listed as playable only where it changes the puzzle.
 4. Quotations and notes were cut to what could be confirmed.
 5. Names of people with a well-known cloud over them were taken out of passing mentions. The review file says which.
+6. After the first play-through by its maker: the way forward is spelled out. A numbered list in the world view says what to do next, a session shows its five steps along the top, travel is one click on a stop's name, and every place has a marker for leaving. Towns hold about a third fewer people, hats became the exception, nothing grows on a railway line, and the figures were redrawn with longer legs, knees, hands, shoes and eyes.

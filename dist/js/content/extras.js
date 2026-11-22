@@ -170,7 +170,8 @@ export const HOWTO = [
   ['Sit in', 'The blue marker is the session room. A recording tells you about a piece of work and the people who did it.'],
   ['Play', 'Each session has an instrument with three rounds: Play, Twist and Case. Move things. Watch the meter. Folio will help when asked, and nothing can be lost.'],
   ['File', 'The Case round gives one card of evidence about the Common Shelf. Your tablet keeps the case board.'],
-  ['Travel', 'Open the map and choose a stop. Longer journeys offer a puzzle for the carriage.'],
+  ['What next', 'The list at the top left always says what to do next, one step at a time, with a button for the step you are on.'],
+  ['Travel', 'Press Travel, or M, and click the name of any stop on the map. The orange marker in each place opens the same map. Tick “Carriage puzzle” there for something to do on long trips.'],
   ['Together', 'Two people can share the screen. Look for “Talk it over” before each Twist, the set-and-solve versions, and the kitchen table page.'],
 ];
 export const TWO_PLAYER = [

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { C } from './kit.js';
 
 export function rails(k, x1, z1, x2, z2) {
-  k.path([[x1, z1], [x2, z2]], 2.2, 0x8c8478, 0.035);
+  k.path([[x1, z1], [x2, z2]], 2.2, 0x8c8478, 0.035); k.track(x1, z1, x2, z2, 1.1, true);
   const len = Math.hypot(x2 - x1, z2 - z1), ang = Math.atan2(x2 - x1, z2 - z1), n = Math.floor(len / 1.4);
   for (let i = 0; i <= n; i++) { const t = i / n; const m = k.mesh(new THREE.BoxGeometry(1.9, 0.08, 0.28), 0x6b5a4a); m.position.set(x1 + (x2 - x1) * t, 0.07, z1 + (z2 - z1) * t); m.rotation.y = ang; m.castShadow = false; }
   for (const s of [-0.62, 0.62]) { const m = k.mesh(new THREE.BoxGeometry(0.1, 0.1, len), 0x9aa3ab, { metalness: 0.5, roughness: 0.4 }); m.position.set((x1 + x2) / 2 + Math.cos(ang) * s, 0.14, (z1 + z2) / 2 - Math.sin(ang) * s); m.rotation.y = ang; m.castShadow = false; }
@@ -129,10 +129,10 @@ export function kite(k, x, z) {
   return kid;
 }
 export function ballGame(k, x, z) {
-  const pts = [0, 1, 2].map((i) => { const a = (i / 3) * Math.PI * 2 + 0.4; return [x + Math.cos(a) * 2.1, z + Math.sin(a) * 2.1]; });
+  const pts = [0, 1].map((i) => { const a = i * Math.PI + 0.4; return [x + Math.cos(a) * 2.1, z + Math.sin(a) * 2.1]; });   // two children and a ball
   pts.forEach((p) => k.npc(p[0], p[1], { kind: 'child', role: 'ballkid', idle: 'play', face: [x, z], fixed: true }));
   const ball = new THREE.Mesh(G('ico1', () => new THREE.IcosahedronGeometry(1, 1)), M(k.r.pick([0xd24d3e, 0xe2b23a, 0xf4f2ec]))); ball.scale.setScalar(0.17); ball.castShadow = true; k.g.add(ball);
-  k.anim.push((t) => { const u = (t / 2.4) % 3, i = Math.floor(u), q = u - i, a = pts[i], b = pts[(i + 1) % 3], e = q * q * (3 - 2 * q); ball.position.set(a[0] + (b[0] - a[0]) * e, 0.75 + Math.sin(q * Math.PI) * 1.3, a[1] + (b[1] - a[1]) * e); });
+  k.anim.push((t) => { const u = (t / 2.4) % 2, i = Math.floor(u), q = u - i, a = pts[i], b = pts[(i + 1) % 2], e = q * q * (3 - 2 * q); ball.position.set(a[0] + (b[0] - a[0]) * e, 0.75 + Math.sin(q * Math.PI) * 1.3, a[1] + (b[1] - a[1]) * e); });
 }
 export function taichi(k, x, z, n = 4) { const face = k.r.u() * 6.28; for (let i = 0; i < n; i++) k.npc(x + (i % 2) * 1.8 - 0.9 + (Math.floor(i / 2) % 2) * 0.5, z + Math.floor(i / 2) * 1.8 - 0.9, { kind: i % 2 ? 'elder' : 'adult', role: 'taichi', idle: 'taichi', face, pack: false }); }
 export function painter(k, x, z, lookAt) {
@@ -142,8 +142,8 @@ export function painter(k, x, z, lookAt) {
   return k.npc(x, z, { role: 'painter', idle: 'paint', face: a, fixed: true, pack: false });
 }
 export function busker(k, x, z, face) {
-  const n = k.npc(x, z, { role: 'busker', idle: 'play', face, fixed: true, pack: false }); const c = new THREE.Mesh(unitBox(), M(0x8a5a3a)); c.scale.set(0.3, 0.95, 0.16); c.position.set(0.12, 0.62, 0.28); c.rotation.z = 0.25; n.g.add(c);
-  const nk = new THREE.Mesh(unitBox(), M(0x3a2a22)); nk.scale.set(0.05, 0.7, 0.05); nk.position.set(0.3, 1.25, 0.28); nk.rotation.z = 0.25; n.g.add(nk);
+  const n = k.npc(x, z, { role: 'busker', idle: 'play', face, fixed: true, pack: false }); const c = new THREE.Mesh(unitBox(), M(0x8a5a3a)); c.scale.set(0.3, 0.44, 0.12); c.position.set(0.06, 0.86, 0.2); c.rotation.z = 0.9; n.g.add(c);
+  const nk = new THREE.Mesh(unitBox(), M(0x3a2a22)); nk.scale.set(0.045, 0.5, 0.04); nk.position.set(-0.3, 1.04, 0.2); nk.rotation.z = 0.9; n.g.add(nk);
   bx(k, 0x3a2a22, x + Math.sin(face) * 1.1, 0.06, z + Math.cos(face) * 1.1, 0.9, 0.1, 0.4, face); for (let i = 0; i < 4; i++) bx(k, 0xd9a441, x + Math.sin(face) * 1.1 + k.r.range(-0.3, 0.3), 0.13, z + Math.cos(face) * 1.1 + k.r.range(-0.1, 0.1), 0.06, 0.02, 0.06);
   return n;
 }
@@ -174,7 +174,7 @@ export function cart(k, x, z, kind = 'books', face = 0) {
   k.labels.push({ text: kind === 'books' ? 'The Common Shelf' : hot ? (k.r.chance(0.5) ? 'Hot chocolate' : 'Coffee and tea') : k.r.chance(0.5) ? 'Lemonade' : 'Ices', x, y: 3.1, z, kind: 'sign' });
   return k.npc(x - Math.sin(face) * 1.0, z - Math.cos(face) * 1.0, { role: kind === 'books' ? 'cart' : 'vendor', face, pack: false, top: kind === 'books' ? 0x2f6f8f : 0xefe6d2, fixed: false });
 }
-export function birder(k, x, z, lookAt) { const n = k.npc(x, z, { role: 'birder', face: lookAt, fixed: true, kind: k.r.chance(0.5) ? 'elder' : 'adult', pack: false, top: 0x6f7a52 }); const b = new THREE.Mesh(unitBox(), M(0x2a2e36)); b.scale.set(0.2, 0.08, 0.14); b.position.set(0, 1.38, 0.2); n.g.add(b); n.p.arms[0].rotation.x = n.p.arms[1].rotation.x = -2.2; return n; }
+export function birder(k, x, z, lookAt) { const n = k.npc(x, z, { role: 'birder', face: lookAt, fixed: true, kind: k.r.chance(0.5) ? 'elder' : 'adult', pack: false, top: 0x6f7a52 }); const b = new THREE.Mesh(unitBox(), M(0x2a2e36)); b.scale.set(0.17, 0.07, 0.12); b.position.set(0, 1.455, 0.19); n.g.add(b); n.p.arms[0].rotation.x = n.p.arms[1].rotation.x = -2.2; return n; }
 export function snowman(k, x, z) {
   for (const [y, s] of [[0.45, 0.5], [1.05, 0.36], [1.5, 0.25]]) { const m = new THREE.Mesh(G('ico1', () => new THREE.IcosahedronGeometry(1, 1)), M(0xfafcfd)); m.position.set(x, y, z); m.scale.setScalar(s); m.castShadow = true; k.g.add(m); }
   const nose = k.mesh(new THREE.ConeGeometry(0.05, 0.3, 5).rotateX(Math.PI / 2), 0xe07b22); nose.position.set(x, 1.5, z + 0.32); for (const s of [-1, 1]) { const a = bx(k, 0x6a5445, x + s * 0.55, 1.1, z, 0.6, 0.04, 0.04); a.rotation.z = s * 0.5; }
@@ -206,8 +206,11 @@ export function robot(k, loop) {
 export function life(k, loops, o = {}) {
   const r = k.r, S = k.seasonName, winter = S === 'winter', wet = k.weather === 'rain', fair = !winter && !wet;
   const { adults = 5, kids = 2, bikes = 1, dogs = 1, prams = 1, scooters = 1, families = 2, drone = false, mower = null, tour = null } = o;
-  k.crowd(loops, { adults, kids, bikes: winter ? 0 : bikes, dogs: Math.max(1, dogs), prams, scooters: fair ? scooters : 0, elders: 2, runners: wet ? 0 : 1, chairs: 1 });
-  for (let i = 0; i < families; i++) k.family(i % 2 ? loops[i % loops.length].slice().reverse() : loops[i % loops.length]);
+  k.clearTracks();
+  // quiet towns: roughly two people where a busier draft had three
+  const some = (n, least = 0) => Math.max(least, Math.round(n * 0.6));
+  k.crowd(loops, { adults: some(adults, 2), kids: some(kids, 1), bikes: winter ? 0 : some(bikes), dogs: Math.max(1, some(dogs)), prams: families ? 0 : prams, scooters: fair ? some(scooters) : 0, elders: 1, runners: wet ? 0 : 1, chairs: 1 });
+  for (let i = 0; i < some(families, 1); i++) k.family(i % 2 ? loops[i % loops.length].slice().reverse() : loops[i % loops.length]);
   robot(k, loops[0]);
   if (drone) k.drone([[-20, -18], [18, -20], [22, 10], [-16, 14]], 13);
   if (mower && fair) k.mower(...mower);
@@ -219,7 +222,7 @@ export function life(k, loops, o = {}) {
   const e = k.size / 2 - 5;
   for (const [x, z] of [[-e, -e + 4], [e, -e + 6], [-e + 3, e - 14], [e - 2, 4], [0, -e + 2]]) k.spot(x, z, 'b');
   // a school group on a visit
-  if (tour) { const [x, z] = tour; k.npc(x, z, { role: 'guide', idle: 'wave', top: 0x2f6f8f, pack: false }); for (let i = 0; i < 6; i++) k.npc(x + 1.1 + (i % 3) * 0.75, z + 0.9 + Math.floor(i / 3) * 0.75, { kind: 'schoolkid', role: 'schoolkid', face: [x, z] }); }
+  if (tour) { const [x, z] = tour; k.npc(x, z, { role: 'guide', idle: 'wave', top: 0x2f6f8f, pack: false }); for (let i = 0; i < 3; i++) k.npc(x + 1.0 + i * 0.75, z + 0.9 + (i % 2) * 0.5, { kind: 'schoolkid', role: 'schoolkid', face: [x, z] }); }
   const all = loops.flat(), beside = (pt, within = 4.2, apart = 3.4) => k.find([LAWN, WILD], { near: pt, within, apart, margin: 3 }), open = (apart = 6.5) => k.find([LAWN, WILD], { apart, margin: 5 });
   const toward = (p, q) => Math.atan2(q[0] - p[0], q[1] - p[1]); let p;
   // carts by the way in
@@ -227,18 +230,17 @@ export function life(k, loops, o = {}) {
   if ((p = beside([(s.x + d.x) / 2, (s.z + d.z) / 2], 6))) cart(k, p[0], p[1], 'drinks', toward(p, [(s.x + d.x) / 2, (s.z + d.z) / 2]));
   // benches and lamps beside the paths
   let firstBench = null;
-  for (let i = 0; i < 5; i++) { const pt = r.pick(all); if ((p = beside(pt, 2.6, 4))) { const rot = toward(p, pt); k.bench(p[0], p[1], rot, r.chance(0.75)); firstBench ||= p; if (i % 2 === 0) k.lamp(p[0] + Math.cos(rot) * 1.5, p[1] - Math.sin(rot) * 1.5); } }
+  for (let i = 0; i < 5; i++) { const pt = r.pick(all); if ((p = beside(pt, 2.6, 4))) { const rot = toward(p, pt); k.bench(p[0], p[1], rot, r.chance(0.5)); firstBench ||= p; if (i % 2 === 0) k.lamp(p[0] + Math.cos(rot) * 1.5, p[1] - Math.sin(rot) * 1.5); } }
   // people doing things
   if (fair && (p = beside(r.pick(all), 3.4))) busker(k, p[0], p[1], toward(p, r.pick(all)));
   if (fair && (p = beside(r.pick(all), 3.6))) chess(k, p[0], p[1]);
   if (fair && (p = beside(r.pick(far.length ? far : all), 5))) painter(k, p[0], p[1], [d.x, d.z]);
   if (!winter && (p = open())) gardener(k, p[0], p[1]);
   if (fair && (p = open())) picnic(k, p[0], p[1]);
-  if (fair && S !== 'fall' && (p = open())) picnic(k, p[0], p[1]);
   if (fair && (p = open(8))) kite(k, p[0], p[1]);
   if (fair && (p = open())) ballGame(k, p[0], p[1]);
-  if (!wet && (p = open())) taichi(k, p[0], p[1], r.int(3, 5));
-  if (fair && (p = open())) sitters(k, p[0], p[1], r.int(4, 6), 1.5, false, 'student', 'student');
+  if (!wet && (p = open())) taichi(k, p[0], p[1], 2);
+  if (fair && (p = open())) sitters(k, p[0], p[1], 2, 1.2, false, 'student', 'student');
   if (winter) { if ((p = open())) snowman(k, p[0], p[1]); if ((p = open())) snowman(k, p[0], p[1]); }
   // water and what lives on it
   const still = k.waterAreas.filter((w) => !w.river), run = k.waterAreas.filter((w) => w.river);

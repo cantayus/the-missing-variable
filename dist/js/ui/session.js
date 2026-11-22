@@ -16,12 +16,16 @@ const initials = (name) => name.replace(/\(.*?\)/g, '').split(/[\s-]+/).filter((
 export function portraits(names) { return el('div.portraits', names.slice(0, 4).map((n) => el('div.portrait', { style: { background: HUES[hash(n) % HUES.length] }, title: n }, [initials(n), el('small', n.split(',')[0].split(' ').slice(-1)[0])]))); }
 const hostNames = (sess) => sess.plate[0].split(/,| and |;/).map((s) => s.trim()).filter((s) => s && !/colleagues|team|co-authors|librarian/.test(s));
 
+// where you are in a session: the same five steps along the top of each of its screens
+const STEPS = ['Recording', 'Play', 'Twist', 'Case', 'Evidence'];
+const strip = (at) => el('div.rounds.steps', { role: 'img', 'aria-label': `Step ${at + 1} of 5: ${STEPS[at]}` }, STEPS.map((t, i) => el('i' + (i === at ? '.on' : i < at ? '.done' : ''), t)));
+
 export function sitIn(sess, ctx, onDone) {
   const def = BY_ID[sess.id];
   sheet(null, (p, close) => {
     p.classList.add('session');
     const names = hostNames(sess); let shown = 1;
-    p.append(el('div.tag', `Part ${PARTS[sess.part].roman} · session ${sess.id}${sess.core ? ' · core' : ''}`), el('h2', def ? def.name : sess.plate[1]));
+    p.append(strip(0), el('div.tag', `Part ${PARTS[sess.part].roman} · session ${sess.id}${sess.core ? ' · core' : ''}`), el('h2', def ? def.name : sess.plate[1]));
     p.append(el('div.plate', [el('b', sess.plate[0]), ' · ' + sess.plate[1] + ' · ' + sess.plate[2] + ' · ' + sess.plate[3] + ' · Dramatization']));
     if (sess.credited.length) p.append(el('div.note', { style: { marginTop: '4px' } }, 'Credited: ' + sess.credited.join(', ') + '.'));
     const lines = el('div'), host = el('div.host', [el('div.recorded', portraits(names.length ? names : [sess.plate[0]])), lines]); p.append(host);
@@ -37,7 +41,7 @@ export function play(sess, ctx, onDone, mode = 'session') {
   const def = BY_ID[sess.id]; if (!def) { toast('This instrument is still on the bench.'); onDone?.(false); return; }
   setPatch('table');
   runInstrument(def, {
-    mode, rounds: ['play', 'twist', 'case'], talk: sess.talk && (S().wren ? sess.wren : sess.talk), wren: !!S().wren,
+    mode, steps: mode === 'session', rounds: ['play', 'twist', 'case'], talk: sess.talk && (S().wren ? sess.wren : sess.talk), wren: !!S().wren,
     ctx: { seed: S().seed + hash(sess.id) % 1000, caseData: CASE, sample: ctx?.sample || [], bias: ctx?.bias || 0 },
     onVariant: (v) => { if (v) markVariant(sess.id, v); },
     onFinish: (res) => fileEvidence(sess, def, res, onDone),
@@ -50,6 +54,7 @@ function fileEvidence(sess, def, res, onDone) {
   const first = !isDone(sess.id), clean = Object.values(res.done).every((d) => d.clean);
   complete(sess.id, { clean }); sfx('file');
   sheet('Evidence filed', (p, close) => {
+    p.append(strip(4));
     p.append(el('div.card.evidence', { style: { fontSize: '1.05em', maxWidth: '44rem' } }, [el('div.n', sess.id + ' · the Common Shelf · from the simulation'), sess.ev(CASE)]));
     if (sess.sus.length) p.append(el('p', sess.sus.map(([k, v]) => el('span', { style: { display: 'inline-block', margin: '2px 8px 2px 0' } }, [el('b', v > 0 ? 'Supports: ' : 'Weakens: '), SUSPECTS[k].name]))));
     p.append(el('p.note', `${clean ? 'Solved cleanly. ' : 'Solved. '}The instrument is now a “${sess.slot}” tile in your pipeline${first ? `, and ${entriesFor(sess.id).length} entries are new in the Field Guide` : ''}.`));

@@ -52,7 +52,9 @@ export function runInstrument(def, opts = {}) {
   }
   function renderHead() {
     clear(head);
-    head.append(el('h2', def.name), el('div.rounds', rounds.map((r, i) => { const sp = el('span' + (i === ri ? '.on' : done[r] ? '.done' : ''), ROUND_NAMES[r] || r); if (opts.mode === 'workbench' || done[r] || i <= ri) { sp.style.cursor = 'pointer'; sp.tabIndex = 0; sp.onclick = () => start(i); sp.onkeydown = (e) => { if (e.key === 'Enter') start(i); }; } return sp; })), el('div.grow'));
+    const tabs = rounds.map((r, i) => { const sp = el('span' + (i === ri ? '.on' : done[r] ? '.done' : ''), ROUND_NAMES[r] || r); if (opts.mode === 'workbench' || done[r] || i <= ri) { sp.style.cursor = 'pointer'; sp.tabIndex = 0; sp.onclick = () => start(i); sp.onkeydown = (e) => { if (e.key === 'Enter') start(i); }; } return sp; });
+    // in a session the three rounds sit between the recording and the evidence card, numbered, so the way through is plain
+    head.append(el('h2', def.name), opts.steps ? el('div.rounds.steps', [el('i.done', 'Recording'), ...tabs, el('i', 'Evidence')]) : el('div.rounds', tabs), el('div.grow'));
     if (def.formula) head.append(el('button.btn.quiet.small', { onclick: () => { const f = side.querySelector('.formula'); f.classList.toggle('hidden'); } }, 'Formula'));
     head.append(el('button.btn.quiet.small', { onclick: () => { if (undo.length) { s = undo.pop(); after(); } }, title: 'Undo the last move' }, 'Undo'), el('button.btn.quiet.small', { onclick: () => start(ri) }, 'Put it back'), el('button.btn.quiet.small', { onclick: close }, opts.mode === 'workbench' ? 'Close' : 'Step away'));
   }
