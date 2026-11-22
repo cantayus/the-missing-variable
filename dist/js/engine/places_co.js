@@ -348,13 +348,13 @@ export function sf(k) {
   // the waterfront road with its palms; the ball park at the mouth of the creek, the arena, the medical campus
   road(k, [P(28.6, -46), P(28.6, 40)], 2.6); k.sign(26.4, 12, 'The Embarcadero'); for (let z = -42; z <= 36; z += 6.5) k.tree(30.3, z, 'palm', 0.8);
   stadium(k, 20.4, -1, 5.4, 5, { h: 4, color: 0xa5503a }); k.label('Oracle Park', 20.4, 8, -1); k.water(22.6, 6.6, 16.6, 2.2); bridge(k, 28.6, 5, 28.6, 8.2, 3, C.steel);
-  k.cyl(19.6, 30, 5.6, 4.6, { color: 0xe9e9e6, roof: 'dome', roofColor: 0xcfd6dc, seg: 20 }); k.label('Chase Center', 19.6, 10.5, 30); k.box(20, 18, 9, 8, 9, { color: 0xd9d4c8, roof: 'flat', roofColor: C.dark, win: 'bands' }); k.sign(20, 23.4, 'UCSF Mission Bay');
+  k.cyl(19.6, 30, 5.6, 4.6, { color: 0xe9e9e6, roof: 'dome', roofColor: 0xcfd6dc, seg: 20, win: 'bands' }); k.label('Chase Center', 19.6, 10.5, 30); k.box(20, 18, 9, 8, 9, { color: 0xd9d4c8, roof: 'flat', roofColor: C.dark, win: 'bands' }); k.sign(20, 23.4, 'UCSF Mission Bay');
   k.glass(8, 36, 9, 8, 11, { roofColor: C.dark }); k.box(-4, 34, 8, 8, 8, { color: 0xd9d4c8, roof: 'green', win: 'bands' });
   // the grey bridge across the bay, the clock tower at the foot of the main street
   block(k, 35, 3, -10, 26.6, 0.4, 2, 0x9aa3ab); for (const x of [24, 36.4, 44.4]) block(k, x, 0, -10, 0.7, x > 30 ? 9 : 3, 2.6, 0x9aa3ab); for (const x of [36.4, 44.4]) for (const s of [-1, 1]) { const c = k.mesh(new THREE.BoxGeometry(5.4, 0.1, 0.1), 0x9aa3ab); c.position.set(x + s * 2.1, 6.2, -10); c.rotation.z = -s * 0.86; } k.label('Bay Bridge', 40, 12.5, -10);
   k.box(32, -24, 3.4, 14, 3.6, { color: 0xd9d2c2, roof: 'gable', roofColor: C.slate, win: 'tall', plain: true }); steeple(k, 31.2, -24, 1.8, 9, { color: 0xd9d2c2, kind: 'point', clock: true }); k.label('Ferry Building', 31.4, 17.5, -24);
   // more of downtown: the tallest tower with its rounded top, and the white tower on its hill
-  k.cyl(2, -30, 3.4, 30, { color: 0xb8c2cc, roof: 'dome', roofColor: 0xcfd6dc, seg: 12, top: 2.5 }); k.label('Salesforce Tower', 2, 36, -30); k.sign(20.4, -9, 'Transamerica Pyramid');
+  k.cyl(2, -30, 3.4, 30, { color: 0xb8c2cc, roof: 'dome', roofColor: 0xcfd6dc, seg: 12, top: 2.5, win: 'bands' }); k.label('Salesforce Tower', 2, 36, -30); k.sign(20.4, -9, 'Transamerica Pyramid');
   for (const [x, z, w, d, h, c] of [[-18, -30, 8, 8, 18, 0xb8c2cc], [-30, -22, 8, 8, 12, 0xcfc7b8], [-8, -38, 8, 7, 14, 0xd9d4c8], [21, -30, 7, 7, 15, 0xaab4bd], [-29, -38, 9, 7, 10, 0xb9ab8f]]) k.box(x, z, w, d, h, { color: c, roof: 'flat', roofColor: C.dark, win: 'bands' });
   hill(k, 14, -40.6, 8, 5, 3.6); k.cyl(14, -40.6, 1, 8, { color: 0xf4f2ec, roof: 'none', y: 3.2, solid: false, seg: 12 }); k.label('Coit Tower', 14, 15.5, -40.6);
   // far to the north-west, the red bridge; to the west, the row of painted houses on their square, and the mast on the hill

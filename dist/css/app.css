@@ -18,7 +18,7 @@
 * { box-sizing: border-box; }
 html { font-size: clamp(15px, 0.55vw + 8px, 30px); }
 html, body { margin: 0; height: 100%; overflow: hidden; }
-body { font-family: var(--ui); color: var(--ink); font-size: calc(1rem * var(--fs)); line-height: 1.45; background: linear-gradient(var(--sky-top), var(--sky-bot)); -webkit-font-smoothing: antialiased; }
+body { font-family: var(--ui); color: var(--ink); font-size: calc(1rem * var(--fs)); line-height: 1.45; background: radial-gradient(64vw 48vh at 22% 6%, rgba(255, 241, 208, 0.75), rgba(255, 241, 208, 0) 72%), linear-gradient(var(--sky-top), var(--sky-bot)); -webkit-font-smoothing: antialiased; }
 #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
 #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .wlabel { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 0.7812rem; padding: 2px 0.4375rem; border-radius: 3px 5px 4px 6px; background: rgba(251, 250, 246, 0.82); border: 1px solid var(--line); color: var(--ink); will-change: transform; }

@@ -311,7 +311,7 @@ export function manchester(k) {
   k.label('Manchester Museum', 20, 13.5, -8); k.sign(42.5, 9.6, 'Sackville Gardens');
   // across the road: the dark cube of the computer scientists, the steel drum, the swimming pool, and behind them the park and the mathematicians
   k.box(-8, 24, 12, 11, 8, { color: 0x3f444c, roof: 'flat', roofColor: C.dark, win: 'bands' }); k.label('Kilburn Building', -8, 12.5, 24);
-  k.cyl(9, 22.5, 4.6, 9, { color: 0xb8c2cc, roof: 'none', seg: 18 }); k.disc(9, 22.5, 4.6, 0x9aa3ab, 9.02); k.box(9, 29.6, 12, 4, 7, { color: 0xd9d4c8, roof: 'flat', roofColor: C.dark, win: 'bands' }); k.sign(15.4, 18.4, 'University Place');
+  k.cyl(9, 22.5, 4.6, 9, { color: 0xb8c2cc, roof: 'none', seg: 18, win: 'bands' }); k.disc(9, 22.5, 4.6, 0x9aa3ab, 9.02); k.box(9, 29.6, 12, 4, 7, { color: 0xd9d4c8, roof: 'flat', roofColor: C.dark, win: 'bands' }); k.sign(15.4, 18.4, 'University Place');
   hangar(k, 22.5, 23, 11, 8, 5.5, 0xb8c2cc); k.sign(22.5, 17.6, 'Aquatics Centre');
   k.box(-32, 22, 10, 8, 6, { color: C.brick, roof: 'flat', roofColor: C.dark, win: 'grid' }); k.sign(-25.6, 19, 'Students’ Union');
   k.lawn(-8, 33.4, 16, 5); k.sign(-17.4, 33.4, 'Brunswick Park'); k.box(-8, 40.4, 18, 6, 7, { color: 0xd9d4c8, roof: 'solar', win: 'bands' }); k.label('Alan Turing Building', -8, 11.5, 40.4);
@@ -503,7 +503,7 @@ export function amsterdam(k) {
   k.box(12, -33, 10, 7, 6, { color: 0x4a4f8a, roof: 'flat', roofColor: C.dark, win: 'bands' }); k.sign(12, -28.4, 'Nikhef'); k.box(26, -34, 10, 6, 6, { color: 0xd9d4c8, roof: 'flat', roofColor: C.dark, win: 'bands' }); k.sign(26, -29.8, 'AMOLF');
   k.box(33, -19, 10, 8, 7, { color: 0xc9a67a, roof: 'solar', win: 'bands' }); k.glass(33, -14.4, 6, 1.2, 7); k.label('LAB42', 33, 11, -19);
   k.box(36, -5, 8, 8, 7, { color: 0x6b4a3e, roof: 'flat', roofColor: C.dark, win: 'grid' }); k.sign(36, -0.2, 'Amsterdam University College');
-  k.box(40.4, -31, 4.6, 4.6, 15, { color: 0x2f3338, roof: 'flat', roofColor: C.dark, win: 'none' }); k.sign(40.4, -27.4, 'data tower');
+  k.box(40.4, -31, 4.6, 4.6, 15, { color: 0x4a5670, roof: 'flat', roofColor: C.dark, win: 'none' }); k.sign(40.4, -27.4, 'data tower');
   for (const [dx, c] of [[-2.8, 0xd24d3e], [0, 0xe2b23a], [2.8, 0x3f7fb5]]) k.box(38 + dx, 5, 2.6, 6, 6, { color: c, roof: 'flat', roofColor: C.dark, win: 'grid' }); k.sign(38, 1.2, 'student rooms');
   road(k, [P(46, -40.6), P(46, 48)], 3, 0x6f7278); for (const z of [14, 31]) bridge(k, 46, z - 3.2, 46, z + 3.2, 3.4, C.concrete); k.sign(43.6, -12, 'A10');
   k.path([P(6, 0), P(1.6, -8), P(2.5, -26), P(4, -38.6)], 1.1); k.path([P(-44, 26.6), P(44, 26.6)], 1.6, 0xb86b4f);

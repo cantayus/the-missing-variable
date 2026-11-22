@@ -21,11 +21,15 @@ export function initWorld(canvas, labelsEl, { gfx = 2 } = {}) {
   W.scale = 1; applyResolution();
   W.renderer.shadowMap.enabled = gfx > 0; W.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   W.renderer.outputColorSpace = THREE.SRGBColorSpace;
-  W.renderer.toneMapping = THREE.ACESFilmicToneMapping; W.renderer.toneMappingExposure = 1.02;
+  // Neutral tone mapping keeps colours as bright and as saturated as they were painted. The filmic curve used before greyed them.
+  W.renderer.toneMapping = THREE.NeutralToneMapping; W.renderer.toneMappingExposure = 1.0;
   W.scene = new THREE.Scene();
   W.camera = new THREE.PerspectiveCamera(30, 1, 1, 700);
-  W.hemi = new THREE.HemisphereLight(0xffffff, 0x9aa48a, 0.9); W.scene.add(W.hemi);
-  W.sun = new THREE.DirectionalLight(0xfff3df, 2.2); W.sun.castShadow = gfx > 0;
+  // Three lights: a warm sky with warm light coming back off the ground, the sun, and a soft fill from the side the sun is not on,
+  // so that no wall the camera can see is left dull and shadows on the ground are never heavy.
+  W.hemi = new THREE.HemisphereLight(0xfff6ea, 0xbfb08c, 0.9); W.scene.add(W.hemi);
+  W.fill = new THREE.DirectionalLight(0xffe6d2, 0.4); W.scene.add(W.fill); W.scene.add(W.fill.target);
+  W.sun = new THREE.DirectionalLight(0xfff0d6, 2.0); W.sun.castShadow = gfx > 0;
   const sm = gfx === 2 ? Math.min(4096, W.renderer.capabilities.maxTextureSize) : 1024; W.sun.shadow.mapSize.set(sm, sm);
   const sc = W.sun.shadow.camera; sc.left = -48; sc.right = 48; sc.top = 48; sc.bottom = -48; sc.near = 10; sc.far = 240; W.sun.shadow.bias = -0.0005; W.sun.shadow.normalBias = 0.05;
   W.scene.add(W.sun); W.scene.add(W.sun.target);
@@ -39,7 +43,7 @@ export function initWorld(canvas, labelsEl, { gfx = 2 } = {}) {
 // A plain sky for glass and water to reflect: pale at the horizon, blue overhead, a warm patch for the sun.
 function makeEnv() {
   const pm = new THREE.PMREMGenerator(W.renderer), sc = new THREE.Scene(), geo = new THREE.SphereGeometry(50, 24, 14), p = geo.attributes.position, col = [];
-  const top = new THREE.Color(0x8fbfe6), mid = new THREE.Color(0xeef4f6), bot = new THREE.Color(0xa9a48c), c = new THREE.Color();
+  const top = new THREE.Color(0x9cc8ea), mid = new THREE.Color(0xfff2e0), bot = new THREE.Color(0xb9ae8c), c = new THREE.Color();
   for (let i = 0; i < p.count; i++) { const t = p.getY(i) / 50; c.copy(mid).lerp(t > 0 ? top : bot, Math.min(1, Math.abs(t) * 1.4)); col.push(c.r, c.g, c.b); }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   sc.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
@@ -65,18 +69,19 @@ export function setHour(h) {
   W.hour = h; if (!W.ok) return;
   const day = clamp((h - 6) / 13, 0, 1), mid = 1 - Math.abs(day - 0.5) * 2, ang = lerp(-1.25, 1.25, day);
   W.sun.position.set(Math.sin(ang) * 70, 28 + mid * 55, 38 + Math.cos(ang) * 20);
-  W.sun.color.set(0xffc391).lerp(new THREE.Color(0xfff6e6), Math.pow(mid, 0.6));
+  W.sun.color.set(0xffb97f).lerp(new THREE.Color(0xfff0d8), Math.pow(mid, 0.6));
+  W.fill.position.set(-Math.sign(W.sun.position.x || 1) * 60, 36, 48); W.fill.color.set(0xffd0b4).lerp(new THREE.Color(0xffeede), Math.pow(mid, 0.6));
   const dull = W.kit && W.kit.weather ? 0.72 : 1;
-  W.sun.intensity = (1.2 + mid * 1.3) * dull; W.hemi.intensity = 0.62 + mid * 0.4 + (1 - dull) * 0.5; W.scene.environmentIntensity = 0.35 + mid * 0.25;
+  W.sun.intensity = (1.0 + mid * 0.8) * dull; W.fill.intensity = (0.32 + mid * 0.2) * dull; W.hemi.intensity = 0.7 + mid * 0.28 + (1 - dull) * 0.45; W.scene.environmentIntensity = 0.35 + mid * 0.25;
   const s = SEASONS[W.season], top = new THREE.Color(s.sky[1]), bot = new THREE.Color(s.sky[0]);
   const duskTop = new THREE.Color(day < 0.5 ? 0xd7c3d6 : 0x8d97c4), duskBot = new THREE.Color(day < 0.5 ? 0xfbe0c8 : 0xf6c0a0), k = 1 - Math.pow(mid, 0.5);
   top.lerp(duskTop, k); bot.lerp(duskBot, k);
   if (dull < 1) { top.lerp(new THREE.Color(0xc9d0d6), 0.6); bot.lerp(new THREE.Color(0xdfe3e6), 0.6); }
   document.documentElement.style.setProperty('--sky-top', '#' + top.getHexString());
   document.documentElement.style.setProperty('--sky-bot', '#' + bot.getHexString());
-  const far = W.big || 1; W.scene.fog = new THREE.Fog(new THREE.Color(s.haze).lerp(bot, 0.5), (dull < 1 ? 110 : 150) * far, (dull < 1 ? 300 : 400) * far);
-  const glow = clamp(1 - mid * 2.2, 0, 1);
-  if (W.kit) { for (const m of W.kit.windowMats) m.emissiveIntensity = glow * 1.6 + (dull < 1 ? 0.35 : 0); for (const m of W.kit.lampMats) m.emissiveIntensity = 0.25 + glow * 2 + (dull < 1 ? 0.5 : 0); }
+  const far = W.big || 1; W.scene.fog = new THREE.Fog(new THREE.Color(s.haze).lerp(bot, 0.5).lerp(new THREE.Color(0xfff0dc), 0.25), (dull < 1 ? 110 : 150) * far, (dull < 1 ? 300 : 400) * far);
+  const glow = clamp(1 - mid * 2.2, 0, 1); // windows: a few lamps are on indoors all day, and more as the light goes
+  if (W.kit) { for (const m of W.kit.windowMats) m.emissiveIntensity = 0.14 + glow * 1.2 + (dull < 1 ? 0.3 : 0); for (const m of W.kit.lampMats) m.emissiveIntensity = 0.25 + glow * 2 + (dull < 1 ? 0.5 : 0); }
 }
 
 function disposeGroup(g) {

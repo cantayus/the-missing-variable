@@ -6,15 +6,15 @@ import { RNG } from '../core/rng.js';
 
 export const SEASONS = {
   fall:   { grass: 0xa3b066, lawn: 0xb3c074, tuft: [0x8f9c52, 0xb5b060, 0xa08a4a, 0x9aa85c], trees: [0xd98b2b, 0xc9562b, 0xe2b23a, 0x8a9a3c, 0xb8482f, 0xcf7a2a, 0xe8c24a], conifer: 0x4a7358, flowers: [0xe2b23a, 0xc9562b], sky: ['#f6e3cf', '#cfe2ee'], haze: 0xe9dcc8, water: 0x4f8ea3 },
-  winter: { grass: 0xe6ecef, lawn: 0xf1f4f6, tuft: [0xcfd6d0, 0xb9b79a, 0xdfe5e6], trees: [0xdfe6ea, 0xd3dce2, 0xeef2f4], conifer: 0x466b5c, flowers: [], sky: ['#e8eef4', '#c9d9e6'], haze: 0xe4eaef, water: 0x7fa6b8 },
-  spring: { grass: 0x97c873, lawn: 0xaad883, tuft: [0x86bd62, 0x9fd27a, 0x74ad58, 0xb2dc86], trees: [0x8fc46b, 0x7dba66, 0xa5d477, 0x94cc70], conifer: 0x4f8a5f, flowers: [0xffffff, 0xf7d94c, 0xf3a6c0, 0xb48ad6, 0xf08a5a], sky: ['#eaf4f8', '#bfdff2'], haze: 0xe6f0ee, water: 0x4a9ab0 },
-  summer: { grass: 0x78b862, lawn: 0x8cc874, tuft: [0x69a955, 0x82bf66, 0x5c9c4e, 0x93c96f], trees: [0x4f9a54, 0x5fae5a, 0x3f8a58, 0x6bb568, 0x4a9050], conifer: 0x3f7a55, flowers: [0xffffff, 0xf7d94c, 0xe8674f, 0x8fa9e8], sky: ['#e4f2fb', '#a9d6f2'], haze: 0xe3eef2, water: 0x3f93ad },
+  winter: { grass: 0xe6ecef, lawn: 0xf1f4f6, tuft: [0xcfd6d0, 0xb9b79a, 0xdfe5e6], trees: [0xdfe6ea, 0xd3dce2, 0xeef2f4], conifer: 0x466b5c, flowers: [], sky: ['#f3ece6', '#c9d9e6'], haze: 0xe4eaef, water: 0x7fa6b8 },
+  spring: { grass: 0x97c873, lawn: 0xaad883, tuft: [0x86bd62, 0x9fd27a, 0x74ad58, 0xb2dc86], trees: [0x8fc46b, 0x7dba66, 0xa5d477, 0x94cc70], conifer: 0x4f8a5f, flowers: [0xffffff, 0xf7d94c, 0xf3a6c0, 0xb48ad6, 0xf08a5a], sky: ['#f7f1e3', '#bfdff2'], haze: 0xe6f0ee, water: 0x4a9ab0 },
+  summer: { grass: 0x78b862, lawn: 0x8cc874, tuft: [0x69a955, 0x82bf66, 0x5c9c4e, 0x93c96f], trees: [0x4f9a54, 0x5fae5a, 0x3f8a58, 0x6bb568, 0x4a9050], conifer: 0x3f7a55, flowers: [0xffffff, 0xf7d94c, 0xe8674f, 0x8fa9e8], sky: ['#f8f0dc', '#a9d6f2'], haze: 0xe3eef2, water: 0x3f93ad },
 };
 
 export const C = {
-  brick: 0xb5654a, brickDark: 0x9a5340, stone: 0xcfc7b8, lime: 0xe4dccb, sand: 0xd9c4a0, concrete: 0xd4d5d2,
-  white: 0xf4f2ec, glass: 0xbfe3f2, slate: 0x6b7684, roof: 0x4a5568, copper: 0x6fa59a, wood: 0xa47148,
-  red: 0xc0503f, dark: 0x3a4250, steel: 0xaab4bd, water: 0x4f8ea3, soil: 0x9a7b5a, rock: 0x7d7f86,
+  brick: 0xc46f54, brickDark: 0xaa5d47, stone: 0xdbd1bc, lime: 0xeee4cf, sand: 0xd9c4a0, concrete: 0xdedbd2,
+  white: 0xf4f2ec, glass: 0xbfe3f2, slate: 0x7a89a6, roof: 0x5f6e8c, copper: 0x79b5a6, wood: 0xa47148,
+  red: 0xd0584a, dark: 0x3a4250, steel: 0xaab4bd, water: 0x4f8ea3, soil: 0x9a7b5a, rock: 0x7d7f86,
   path: 0xe2d8c3, plaza: 0xd9d4c8, ink: 0x1c2b4a, glow: 0x9fe8ff, gold: 0xd9a441, teal: 0x3f9aa0, cream: 0xefe6d2, bark: 0x7a5a43,
 };
 
@@ -71,28 +71,44 @@ function rippleNormal() {
   }, { srgb: false });
 }
 const winCache = new Map();
+// Walls and windows are painted, not modelled. A tile is two windows wide and two floors high, so windows are large for the size of the house:
+// pale glass with a streak of sky in it, a cream frame, a sill, and on some houses shutters and a box of plants.
 function windowTextures(wall, style = 'grid') {
   const key = wall + style;
   if (winCache.has(key)) return winCache.get(key);
   const S = 256, r = new RNG(key);
   const mk = () => { const c = document.createElement('canvas'); c.width = c.height = S; return c; };
-  const a = mk(), b = mk(), ca = a.getContext('2d'), cb = b.getContext('2d'), col = new THREE.Color(wall);
-  ca.fillStyle = '#' + col.getHexString(); ca.fillRect(0, 0, S, S);
-  for (let i = 0; i < 1800; i++) { const v = r.chance(0.5) ? 0 : 255; ca.fillStyle = `rgba(${v},${v},${v},${r.range(0.02, 0.06)})`; ca.fillRect(r.u() * S, r.u() * S, r.range(3, 16), r.range(1, 4)); }
+  const a = mk(), b = mk(), ca = a.getContext('2d'), cb = b.getContext('2d'), col = new THREE.Color(wall), hex = (c) => '#' + c.getHexString();
+  ca.fillStyle = hex(col); ca.fillRect(0, 0, S, S);
+  for (let i = 0; i < 1200; i++) { const v = r.chance(0.5) ? 0 : 255; ca.fillStyle = `rgba(${v},${v},${v},${r.range(0.015, 0.045)})`; ca.fillRect(r.u() * S, r.u() * S, r.range(3, 16), r.range(1, 4)); }
   cb.fillStyle = '#000'; cb.fillRect(0, 0, S, S);
-  const cols = style === 'bands' ? 1 : 4, rows = 4;
+  const bands = style === 'bands', tall = style === 'tall', cols = bands ? 1 : 2, rows = 2, light = col.getHSL({}).l;
+  const frame = hex(col.clone().lerp(WHITE, light > 0.8 ? 0.2 : 0.8)), sill = hex(col.clone().multiplyScalar(0.8)), pane = new THREE.Color(0xa6d2ea).lerp(col, 0.1);
+  const shut = !bands && light > 0.4 && r.chance(0.55) ? hex(new THREE.Color(r.pick([0x4f9aa0, 0x7fa77a, 0x6f8fb8, 0xc0604c, 0xd9a441, 0x8a78b0]))) : null;
   for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
-    const cw = S / cols, ch = S / rows, w = style === 'bands' ? cw : cw * 0.46, h = ch * (style === 'tall' ? 0.7 : 0.5);
-    const x = i * cw + (cw - w) / 2 + r.range(-1, 1), y = j * ch + (ch - h) / 2 + r.range(-1, 1);
-    const d = col.clone().multiplyScalar(0.55 + r.range(-0.05, 0.08));
-    ca.fillStyle = '#' + d.getHexString(); ca.fillRect(x, y, w, h);
-    ca.fillStyle = 'rgba(255,255,255,0.14)'; ca.fillRect(x, y, w, 3); ca.fillStyle = 'rgba(0,0,0,0.12)'; ca.fillRect(x, y + h, w, 3); if (style !== 'bands') { ca.fillStyle = 'rgba(255,255,255,0.1)'; ca.fillRect(x + w / 2 - 1, y, 2, h); ca.fillRect(x, y + h / 2 - 1, w, 2); }
-    if (r.chance(0.6)) { cb.fillStyle = r.chance(0.5) ? '#fff' : '#bbb'; cb.fillRect(x, y, w, h); }
+    const cw = S / cols, ch = S / rows, w = bands ? cw : cw * 0.44, h = ch * (tall ? 0.66 : 0.5), x = i * cw + (cw - w) / 2, y = j * ch + (ch - h) / 2 - (bands ? 0 : ch * 0.03), arc = tall ? w / 2 : 0;
+    const shape = (g, out = 0) => { g.beginPath(); if (tall) { g.moveTo(x - out, y + h + out); g.lineTo(x - out, y + arc); g.arc(x + w / 2, y + arc, arc + out, Math.PI, 0); g.lineTo(x + w + out, y + h + out); } else g.rect(x - out, y - out, w + out * 2, h + out * 2); g.closePath(); };
+    if (!bands) { if (shut) { ca.fillStyle = shut; ca.fillRect(x - 6 - w * 0.3, y + arc, w * 0.3, h - arc); ca.fillRect(x + w + 6, y + arc, w * 0.3, h - arc); } ca.fillStyle = frame; shape(ca, 5); ca.fill(); }
+    ca.fillStyle = hex(pane.clone().offsetHSL(0, 0, r.range(-0.03, 0.03))); shape(ca); ca.fill();
+    ca.save(); shape(ca); ca.clip(); ca.fillStyle = 'rgba(255,255,255,0.3)'; ca.beginPath(); ca.moveTo(x, y + h * 0.55); ca.lineTo(x + w * 0.5, y); ca.lineTo(x + w * 0.78, y); ca.lineTo(x, y + h * 0.9); ca.closePath(); ca.fill(); ca.restore();
+    ca.fillStyle = frame;
+    if (bands) { ca.fillRect(0, y - 4, S, 4); ca.fillRect(0, y + h, S, 4); for (let q = 0; q < 4; q++) ca.fillRect(x + (q * w) / 4 - 2, y, 4, h); }
+    else {
+      ca.fillRect(x + w / 2 - 2, y + arc * 0.3, 4, h - arc * 0.3); ca.fillRect(x, y + h * (tall ? 0.55 : 0.5) - 2, w, 4);
+      ca.fillStyle = sill; ca.fillRect(x - 8, y + h + 5, w + 16, 5);
+      if (r.chance(0.3)) { ca.fillStyle = '#b9714e'; ca.fillRect(x - 3, y + h - 1, w + 6, 10); for (let q = 0; q < 6; q++) { ca.fillStyle = q % 2 ? '#5f9a55' : '#74ad5f'; ca.beginPath(); ca.arc(x + (q + 0.5) * (w / 6), y + h - 2, 6, 0, 7); ca.fill(); } for (let q = 0; q < 4; q++) { ca.fillStyle = r.pick(['#e9604f', '#f2c94c', '#f3a6c0', '#ffffff']); ca.beginPath(); ca.arc(x + r.range(4, w - 4), y + h - r.range(3, 7), 2.4, 0, 7); ca.fill(); } }
+    }
+    if (r.chance(0.6)) { cb.fillStyle = r.chance(0.5) ? '#fff' : '#bbb'; shape(cb); cb.fill(); }
   }
   const ta = new THREE.CanvasTexture(a), tb = new THREE.CanvasTexture(b);
   for (const t of [ta, tb]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = t === ta ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; }
   const out = { map: ta, emissive: tb }; winCache.set(key, out); return out;
 }
+const WHITE = new THREE.Color(0xffffff);
+const DOORS = [0xd9534a, 0x3f7fb5, 0x4f9a64, 0xe2a83a, 0x8a6aa8, 0x2f8f8f, 0xe07b3a, 0xc0567a];
+const ubox = () => NI('ubox', () => new THREE.BoxGeometry(1, 1, 1));
+// a dark roof is lifted towards a dusty blue, so that it sits lighter on the house; a flat one, which shows most of all from above, is lifted further
+function roofTone(c, flat = false) { const k = new THREE.Color(c), l = k.getHSL({}).l; return flat ? (l < 0.5 ? k.lerp(new THREE.Color(0xa3aec2), 0.62 - l * 0.4).getHex() : c) : l < 0.34 ? k.lerp(new THREE.Color(0x7786a3), 0.5 - l * 0.4).getHex() : c; }
 function prismGeo() {
   return G('prism', () => {
     const g = new THREE.BufferGeometry();
@@ -159,7 +175,7 @@ export class Batch {
     const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; m.userData.batch = true; return m;
   }
 }
-const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
+const _g = new THREE.Matrix4(), _f = new THREE.Matrix4(), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
 export function TRS(px, py, pz, sx, sy, sz, rx = 0, ry = 0, rz = 0) { _e.set(rx, ry, rz); _q.setFromEuler(_e); return _m.compose(_p.set(px, py, pz), _q, _s.set(sx, sy, sz)); }
 
 export class Kit {
@@ -168,6 +184,7 @@ export class Kit {
     this.anim = []; this.obstacles = []; this.windowMats = []; this.labels = []; this.picks = []; this.spots = [];
     this.npcs = []; this.fauna = []; this.treeSpots = []; this.lampMats = []; this.waterAreas = []; this.tracks = [];
     this.veg = new Batch(); this.own = [];
+    this.deco = new Batch(); this.glowB = new Batch(); this.houses = []; this.smokers = []; this.rc = new RNG(seed + ':trim'); // trimmings, and their own dice so that nothing else in the place moves
     this.door = { x: 0, z: 10 }; this.spawn = { x: 0, z: 22 }; this.size = 60; this.mask = new Mask(60);
     this.player = { x: 0, z: 0 }; this.weather = null; this.tags = [];
   }
@@ -272,12 +289,14 @@ export class Kit {
   box(x, z, w, d, h, o = {}) {
     const { color = C.stone, roof = 'flat', roofColor = C.roof, win = 'grid', rot = 0, y = 0, solid = true, roofH, name } = o;
     const grp = new THREE.Group(); grp.position.set(x, y, z); grp.rotation.y = rot;
-    let side;
+    const gm = new THREE.Matrix4().makeRotationY(rot).setPosition(x, y, z), roofC = roofTone(roofColor, roof === 'flat'), rx = Math.max(1, Math.round(w / 5)), ry = Math.max(1, Math.round(h / 4.5));
+    const dress = !o.glass && win !== 'none' && roof !== 'none' && y < 0.5 && h >= 2.4, toy = dress && !o.plain && Math.min(w, d) >= 2.4; // a house on the ground; one that may have a door and the rest
+    let side, rh = 0;
     if (win !== 'none' && h >= 2) {
       const t = windowTextures(color, win);
       const mk = (len) => {
-        const map = t.map.clone(), em = t.emissive.clone(), rx = Math.max(1, Math.round(len / 5)), ry = Math.max(1, Math.round(h / 4.5));
-        map.repeat.set(rx, ry); em.repeat.set(rx, ry); map.needsUpdate = em.needsUpdate = true;
+        const map = t.map.clone(), em = t.emissive.clone(), nx = Math.max(1, Math.round(len / 5));
+        map.repeat.set(nx, ry); em.repeat.set(nx, ry); map.needsUpdate = em.needsUpdate = true;
         const m = new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffd9a0, emissiveIntensity: 0, flatShading: true, roughness: 0.9 });
         this.windowMats.push(m); return m;
       };
@@ -287,15 +306,16 @@ export class Kit {
     body.scale.set(w, h, d); body.position.y = h / 2; body.castShadow = true; body.receiveShadow = true; grp.add(body);
     const unit = () => G('box', () => new THREE.BoxGeometry(1, 1, 1));
     if (roof === 'gable') {
-      const rh = roofH ?? Math.min(w, d) * 0.45, along = d >= w, m = new THREE.Mesh(prismGeo(), M(roofColor)); m.castShadow = true;
-      if (along) m.scale.set(w * 1.06, rh, d * 1.04); else { m.rotation.y = Math.PI / 2; m.scale.set(d * 1.06, rh, w * 1.04); }
+      rh = roofH ?? Math.min(w, d) * 0.45; const along = d >= w, m = new THREE.Mesh(prismGeo(), M(roofC)); m.castShadow = true;
+      if (along) m.scale.set(w * 1.12, rh, d * 1.07); else { m.rotation.y = Math.PI / 2; m.scale.set(d * 1.12, rh, w * 1.07); }
       m.position.y = h; grp.add(m);
-      if (!o.plain && Math.min(w, d) > 3.5 && this.r.chance(0.6)) { const ch = new THREE.Mesh(unit(), M(C.brickDark)); ch.scale.set(0.6, rh * 0.9, 0.6); ch.position.set(along ? w * 0.22 : d * 0.1, h + rh * 0.6, along ? d * 0.2 : w * 0.2); ch.castShadow = true; grp.add(ch); }
+      if (!o.plain && Math.min(w, d) > 3.5 && this.r.chance(0.6)) { const ch = new THREE.Mesh(unit(), M(C.brickDark)); ch.scale.set(0.7, rh * 0.9, 0.7); ch.position.set(along ? w * 0.22 : d * 0.1, h + rh * 0.6, along ? d * 0.2 : w * 0.2); ch.castShadow = true; grp.add(ch); this._deco(gm, ch.position.x, h + rh * 1.05 + 0.08, ch.position.z, 0.9, 0.16, 0.9, 0xe9e2d2); if (dress) this.smokers.push(new THREE.Vector3(ch.position.x, h + rh * 1.05 + 0.3, ch.position.z).applyMatrix4(gm)); }
     } else if (roof === 'hip') {
-      const rh = roofH ?? Math.min(w, d) * 0.4, m = new THREE.Mesh(G('pyr', () => new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4)), M(roofColor));
-      m.scale.set(w * 1.06, rh, d * 1.06); m.position.y = h + rh / 2; m.castShadow = true; grp.add(m);
+      rh = roofH ?? Math.min(w, d) * 0.4; const m = new THREE.Mesh(G('pyr', () => new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4)), M(roofC));
+      m.scale.set(w * 1.13, rh, d * 1.13); m.position.y = h + rh / 2; m.castShadow = true; grp.add(m);
     } else if (roof === 'flat') {
-      const m = new THREE.Mesh(unit(), M(roofColor)); m.scale.set(w * 1.03, 0.25, d * 1.03); m.position.y = h + 0.12; grp.add(m);
+      const m = new THREE.Mesh(unit(), M(roofC)); m.scale.set(w * 1.03, 0.25, d * 1.03); m.position.y = h + 0.12; grp.add(m);
+      if (toy && w > 5 && d > 5 && h > 3 && this.rc.chance(0.42)) this._terrace(gm, w, d, h);
       if (!o.plain && w > 5 && d > 5 && h > 3) { for (let i = 0; i < 2; i++) { const u = new THREE.Mesh(unit(), M(i ? C.steel : C.concrete)); u.scale.set(this.r.range(0.8, 1.6), this.r.range(0.5, 0.9), this.r.range(0.8, 1.6)); u.position.set(this.r.range(-w * 0.3, w * 0.3), h + 0.6, this.r.range(-d * 0.3, d * 0.3)); u.castShadow = true; grp.add(u); } }
     } else if (roof === 'green') {
       const m = new THREE.Mesh(unit(), M(this.season.lawn)); m.scale.set(w * 0.96, 0.3, d * 0.96); m.position.y = h + 0.15; grp.add(m);
@@ -305,6 +325,16 @@ export class Kit {
       for (let i = 0; i < rows; i++) { const m = new THREE.Mesh(unit(), M(0x2f4a6b, { roughness: 0.25, metalness: 0.5, envMapIntensity: 1.4 })); m.scale.set(w * 0.86, 0.1, (d / rows) * 0.62); m.position.set(0, h + 0.38, -d / 2 + (d * (i + 0.5)) / rows); m.rotation.x = -0.3; grp.add(m); }
       const b = new THREE.Mesh(unit(), M(C.concrete)); b.scale.set(w * 1.02, 0.2, d * 1.02); b.position.y = h + 0.1; grp.add(b);
     }
+    if (dress) {
+      const wc = new THREE.Color(color);
+      this._deco(gm, 0, h - 0.13, 0, w + 0.24, 0.26, d + 0.24, wc.clone().lerp(WHITE, 0.62).getHex());   // a pale band under the eaves
+      this._deco(gm, 0, 0.19, 0, w + 0.2, 0.38, d + 0.2, wc.clone().multiplyScalar(0.84).getHex());        // a darker foot
+      this.houses.push({ x, z, w, d, rot, toy });
+    }
+    if (toy) {
+      this._front(gm, w, d, h, win, rx, ry);
+      if ((roof === 'gable' || roof === 'hip') && Math.min(w, d) >= 4.5 && this.rc.chance(0.6)) this._dormers(gm, w, d, h, rh, roof, roofC, color);
+    } else if (dress && Math.min(w, d) >= 3 && h >= 3) this._front(gm, w, d, h, win, rx, ry, true); // the grander buildings keep to a plain door
     this.g.add(grp);
     // what it stands on: exact for a building square to the grid (turned by quarter turns or not at all), a square round it otherwise
     const q = Math.abs(rot) / (Math.PI / 2), quarter = Math.abs(q - Math.round(q)) < 0.01, odd = quarter && Math.round(q) % 2 === 1, rr = Math.max(w, d) / 2;
@@ -314,11 +344,80 @@ export class Kit {
     if (name) this.label(name, x, h + 3, z);
     return grp;
   }
+  // ----- the small things that make a house look lived in. They all go into one mesh, so a place gains a draw call or two, not hundreds -----
+  _deco(gm, px, py, pz, sx, sy, sz, color, rx = 0, ry = 0, rz = 0, geo = ubox()) { _g.multiplyMatrices(gm, TRS(px, py, pz, sx, sy, sz, rx, ry, rz)); this.deco.add(geo, _g, color); }
+  _awning(gm, cx, y, z, wid, color) { const n = Math.max(3, Math.round(wid / 0.3)), sw = wid / n; for (let i = 0; i < n; i++) this._deco(gm, cx - wid / 2 + (i + 0.5) * sw, y, z + 0.36, sw, 0.07, 0.8, i % 2 ? 0xfbf6ea : color, 0.5); this._deco(gm, cx, y - 0.24, z + 0.7, wid, 0.16, 0.05, 0xfbf6ea); }
+  // the front: a painted door with a step, a striped awning or a little porch over it, a lantern, pots; on some houses awnings over the ground-floor windows
+  _front(gm, w, d, h, style, rx, ry, simple = false) {
+    const rc = this.rc, zf = d / 2, col = rc.pick(DOORS), dw = Math.min(1.1, w * 0.3), dh = Math.min(1.75, h * 0.62), kind = rc.u(), green = this.seasonName === 'winter' ? 0x5f7a66 : 0x5fa35c;
+    this._deco(gm, 0, (dh + 0.14) / 2, zf + 0.04, dw + 0.32, dh + 0.14, 0.1, 0xfbf6ea);
+    this._deco(gm, 0, dh / 2, zf + 0.08, dw, dh, 0.1, col);
+    this._deco(gm, dw * 0.28, dh * 0.5, zf + 0.15, 0.1, 0.1, 0.06, 0xf2c94c);
+    this._deco(gm, 0, 0.07, zf + 0.42, dw + 0.8, 0.14, 0.7, 0xd9d2c4);
+    if (simple) { _g.multiplyMatrices(gm, TRS(dw / 2 + 0.36, dh * 0.86, zf + 0.16, 0.11, 0.11, 0.11)); this.glowB.add(blob(0), _g, 0xffffff); return; }
+    if (kind < 0.45) this._awning(gm, 0, dh + 0.5, zf, dw + 0.9, col);
+    else if (kind < 0.8) { this._deco(gm, 0, dh + 0.28, zf + 0.42, 0.95, 0.5, dw + 1, col, 0, Math.PI / 2, 0, prismGeo()); for (const sx of [-1, 1]) this._deco(gm, sx * (dw / 2 + 0.36), (dh + 0.28) / 2, zf + 0.78, 0.1, dh + 0.28, 0.1, 0xfbf6ea); }
+    _g.multiplyMatrices(gm, TRS(dw / 2 + 0.36, dh * 0.86, zf + 0.16, 0.11, 0.11, 0.11)); this.glowB.add(blob(0), _g, 0xffffff);
+    for (const sx of [-1, 1]) if (rc.chance(0.7)) { const px = sx * (dw / 2 + 0.62); this._deco(gm, px, 0.17, zf + 0.42, 0.34, 0.34, 0.34, 0xc27a52); this._deco(gm, px, 0.52, zf + 0.42, 0.3, 0.3, 0.3, green, 0, 0, 0, blob(0)); }
+    if (style === 'grid' && h >= 3.6 && w >= 4 && rc.chance(0.34)) { const n = rx * 2, cw = w / n, c2 = rc.pick(DOORS), y = (h / (ry * 2)) * 0.8 + 0.2; for (let i = 0; i < n; i++) { const xw = -w / 2 + (i + 0.5) * cw; if (Math.abs(xw) > dw / 2 + 0.75) this._awning(gm, xw, y, zf, cw * 0.44 + 0.5, c2); } }
+  }
+  // windows standing out of the roof, each with its own small gable
+  _dormers(gm, w, d, h, rh, roof, roofC, wall) {
+    const along = roof === 'gable' ? d >= w : d > w, L = along ? d : w, D = along ? w : d, hip = roof === 'hip', n = hip ? (L >= 12 ? 2 : 1) : L >= 14 ? 3 : L >= 8 ? 2 : 1;
+    const cream = new THREE.Color(wall).lerp(WHITE, 0.62).getHex(), yc = h + rh * 0.33 + 0.2, off = D * 0.26 + 0.15;
+    for (let i = 0; i < n; i++) {
+      const t = ((i + 0.5) / n - 0.5) * L * (hip ? 0.36 : 0.72);
+      if (along) { this._deco(gm, off, yc, t, 0.9, 0.9, 0.95, cream); this._deco(gm, off + 0.47, yc + 0.02, t, 0.05, 0.5, 0.55, 0xa8d4ec); this._deco(gm, off + 0.05, yc + 0.45, t, 1.25, 0.5, 1.1, roofC, 0, Math.PI / 2, 0, prismGeo()); }
+      else { this._deco(gm, t, yc, off, 0.95, 0.9, 0.9, cream); this._deco(gm, t, yc + 0.02, off + 0.47, 0.55, 0.5, 0.05, 0xa8d4ec); this._deco(gm, t, yc + 0.45, off + 0.05, 1.25, 0.5, 1.1, roofC, 0, 0, 0, prismGeo()); }
+    }
+  }
+  // on a flat roof: a parasol over a table, and planters
+  _terrace(gm, w, d, h) {
+    const rc = this.rc, px = rc.range(-w * 0.25, w * 0.25), pz = rc.range(-d * 0.25, d * 0.25), col = rc.pick(DOORS), green = this.seasonName === 'winter' ? 0x5f7a66 : 0x5fa35c;
+    this._deco(gm, px, h + 0.9, pz, 0.07, 1.3, 0.07, 0xf4f2ec); this._deco(gm, px, h + 1.6, pz, 0.85, 0.36, 0.85, col, 0, 0, 0, coneGeo(8)); this._deco(gm, px, h + 0.66, pz, 0.6, 0.06, 0.6, 0xf4f2ec);
+    for (const s of [-1, 1]) { const qx = px + s * 1.5; if (Math.abs(qx) > w / 2 - 0.8) continue; this._deco(gm, qx, h + 0.42, pz, 0.4, 0.34, 1.3, 0xb8805a); for (const t of [-0.4, 0, 0.4]) this._deco(gm, qx, h + 0.72, pz + t, 0.26, 0.24, 0.26, green, 0, 0, 0, blob(1)); }
+  }
+  // a small flag on a pole, for the top of a tower
+  flag(x, y, z, color) { const c = color ?? this.rc.pick(DOORS), gm = _f.makeTranslation(x, y, z); this._deco(gm, 0, 0.7, 0, 0.06, 1.4, 0.06, 0x4a5568); this._deco(gm, 0.36, 1.14, 0, 0.66, 0.38, 0.03, c); this._deco(gm, 0, 1.45, 0, 0.09, 0.09, 0.09, 0xf2c94c, 0, 0, 0, blob(0)); return this; }
+  // shrubs and flowers along the walls, wherever the ground beside the wall is grass. Run once the recipe is done, when the paths are known.
+  garnish() {
+    const rc = this.rc, keep = this.r, flowers = this.season.flowers.length > 0, lim = this.size / 2 - 1.5, busy = [this.door, this.spawn, ...(this.rooms || []), ...Object.values(this.points || {})];
+    const free = (x, z) => { const g = this.mask.get(x, z); return (g === WILD || g === LAWN) && Math.abs(x) < lim && Math.abs(z) < lim && !this.blocked(x, z) && !busy.some((q) => q && Math.hypot(q.x - x, q.z - z) < 2.6); };
+    let want = 0; for (const b of this.houses) want += Math.floor(b.w / 2.4) * 0.96 + Math.floor(b.d / 2.4) * 0.72;
+    const thin = Math.min(1, 150 / Math.max(1, want));
+    this.r = rc; // the plants take their dice from here as well
+    try {
+      for (const b of this.houses) {
+        const c = Math.cos(b.rot), s = Math.sin(b.rot), at = (lx, lz) => [b.x + lx * c + lz * s, b.z - lx * s + lz * c];
+        const sides = [[b.w, (t) => at(t, b.d / 2 + 0.75), 0.6, true], [b.d, (t) => at(b.w / 2 + 0.75, t), 0.36, false], [b.d, (t) => at(-b.w / 2 - 0.75, t), 0.36, false], [b.w, (t) => at(t, -b.d / 2 - 0.75), 0.36, false]];
+        for (const [len, pt, p, front] of sides) {
+          const n = Math.floor(len / 2.4);
+          for (let i = 0; i < n; i++) {
+            const t = ((i + 0.5) / n - 0.5) * len + rc.range(-0.35, 0.35), take = rc.chance(p * thin), [px, pz] = pt(t);
+            if (!take || (front && b.toy && Math.abs(t) < 1.6) || !free(px, pz)) continue;
+            this.tree(px, pz, 'bush', rc.range(0.5, 0.78)); if (flowers && rc.chance(0.5)) this.flowerBed(px + rc.range(-0.6, 0.6), pz + rc.range(-0.3, 0.3), 1.4, 0.8, 5);
+          }
+        }
+      }
+    } finally { this.r = keep; }
+    return this;
+  }
   glass(x, z, w, d, h, o = {}) { return this.box(x, z, w, d, h, { color: C.glass, win: 'none', glass: true, roof: 'flat', roofColor: C.steel, plain: true, ...o }); }
   cyl(x, z, r, h, o = {}) {
     const { color = C.stone, roof = 'flat', roofColor = C.roof, seg = 14, y = 0, glass = false, solid = true, top = r } = o;
     const grp = new THREE.Group(); grp.position.set(x, y, z);
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(top, r, h, seg), M(color, glass ? { transparent: true, opacity: 0.58, roughness: 0.08, metalness: 0.3, envMapIntensity: 1.6 } : {}));
+    // a round building of any size has windows, a pale band under its roof and a door, unless the recipe says win: 'none'
+    const win = o.win ?? (!glass && y < 0.5 && r >= 2.6 && h >= 3.6 && roof !== 'none' ? 'tall' : 'none');
+    let skin = M(color, glass ? { transparent: true, opacity: 0.58, roughness: 0.08, metalness: 0.3, envMapIntensity: 1.6 } : {});
+    if (win !== 'none' && !glass) {
+      const t = windowTextures(color, win), map = t.map.clone(), em = t.emissive.clone(), nx = Math.max(2, Math.round((2 * Math.PI * r) / 5)), ny = Math.max(1, Math.round(h / 4.5));
+      map.repeat.set(nx, ny); em.repeat.set(nx, ny); map.needsUpdate = em.needsUpdate = true;
+      const sm = new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffd9a0, emissiveIntensity: 0, flatShading: true, roughness: 0.9 }); this.windowMats.push(sm); skin = [sm, M(color), M(color)];
+      if (y < 0.5) { const gm = _f.makeTranslation(x, y, z), ring = NI('ring' + seg, () => new THREE.CylinderGeometry(1, 1, 1, seg)), wc = new THREE.Color(color);
+        this._deco(gm, 0, h - 0.13, 0, top + 0.12, 0.26, top + 0.12, wc.clone().lerp(WHITE, 0.62).getHex(), 0, 0, 0, ring); this._deco(gm, 0, 0.19, 0, r + 0.1, 0.38, r + 0.1, wc.clone().multiplyScalar(0.84).getHex(), 0, 0, 0, ring);
+        this._front(gm, r * 1.2, r * 2 * Math.cos(Math.PI / seg), h, win, 1, ny, true); }
+    }
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(top, r, h, seg), skin);
     m.position.y = h / 2; m.castShadow = m.receiveShadow = true; grp.add(m);
     if (roof === 'cone') { const c = new THREE.Mesh(new THREE.ConeGeometry(top * 1.08, o.roofH ?? r * 1.2, seg), M(roofColor)); c.position.y = h + (o.roofH ?? r * 1.2) / 2; c.castShadow = true; grp.add(c); }
     if (roof === 'dome') { const c = new THREE.Mesh(new THREE.SphereGeometry(top, seg, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(roofColor)); c.position.y = h; c.castShadow = true; grp.add(c); }
@@ -332,7 +431,7 @@ export class Kit {
   tower(x, z, w, h, o = {}) {
     const { color = C.stone, cap = 'spire', capColor = C.copper } = o;
     this.box(x, z, w, w, h, { color, roof: 'none', win: 'tall' });
-    if (cap === 'spire') { const c = new THREE.Mesh(new THREE.ConeGeometry(w * 0.72, h * 0.35, 4).rotateY(Math.PI / 4), M(capColor)); c.position.set(x, h + h * 0.175, z); this.add(c); }
+    if (cap === 'spire') { const c = new THREE.Mesh(new THREE.ConeGeometry(w * 0.72, h * 0.35, 4).rotateY(Math.PI / 4), M(capColor)); c.position.set(x, h + h * 0.175, z); this.add(c); if (this.rc.chance(0.6)) this.flag(x, h + h * 0.35 - 0.1, z); }
     if (cap === 'belfry') this.box(x, z, w * 1.15, w * 1.15, w * 0.9, { color, y: h, roof: 'hip', roofColor: capColor, win: 'tall', solid: false });
     return this;
   }
@@ -507,7 +606,22 @@ export class Kit {
     this.treeSpots = this.treeSpots.filter((t) => !(t.own && gone(t.own))); this.obstacles = this.obstacles.filter((o) => !(o.own && gone(o.own))); return n;
   }
   // called once the recipe is done
-  finish() { const m = this.veg.mesh(this.wind); if (m) this.g.add(m); return this; }
+  finish() {
+    if (this.gfx > 0) this.garnish(); // not at the lowest graphics setting, where every triangle counts
+    for (const b of [this.veg, this.deco]) { const m = b.mesh(this.wind); if (m) this.g.add(m); }
+    if (this.glowB.pos.length) { // the lanterns by the doors: one mesh, lit with the street lamps
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(this.glowB.pos, 3)); g.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({ color: 0xfff1c9, emissive: 0xffd58a, emissiveIntensity: 0.4, flatShading: true }); this.lampMats.push(mat); this.own.push(mat); this.g.add(new THREE.Mesh(g, mat));
+    }
+    const cold = this.seasonName === 'winter' || this.seasonName === 'fall';
+    if (cold && this.gfx > 0 && this.smokers.length) { // smoke from a few chimneys when the weather calls for a fire
+      const at = this.smokers.map((p) => [this.rc.u(), p]).sort((a, b) => a[0] - b[0]).slice(0, 8).map((q) => q[1]), per = 3;
+      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, roughness: 1, depthWrite: false }); this.own.push(mat);
+      const puffs = new THREE.InstancedMesh(blob(0), mat, at.length * per), o = new THREE.Object3D(); puffs.frustumCulled = false; puffs.castShadow = false; this.g.add(puffs);
+      this.anim.push((t) => { for (let i = 0; i < at.length; i++) for (let j = 0; j < per; j++) { const u = (t * 0.2 + j / per + i * 0.37) % 1, s = (0.16 + u * 0.4) * (u > 0.75 ? (1 - u) / 0.25 : 1); o.position.set(at[i].x + Math.sin(t * 0.7 + i + j) * 0.12 + u * 0.5, at[i].y + u * 2.4, at[i].z + u * 0.25); o.scale.setScalar(Math.max(0.001, s)); o.updateMatrix(); puffs.setMatrixAt(i * per + j, o.matrix); } puffs.instanceMatrix.needsUpdate = true; });
+    }
+    return this;
+  }
 }
 const STUB = { traverse() {}, position: {}, rotation: {}, scale: { set() {}, setScalar() {} } };
 export { THREE, blob, rockGeo, cylGeo, coneGeo, leafGeo, NI };
