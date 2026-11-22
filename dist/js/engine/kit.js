@@ -177,7 +177,7 @@ export class Kit {
   custom(mesh) { this.g.add(mesh); return mesh; }
 
   // ----- ground -----
-  ground({ size = 60, color } = {}) {
+  ground({ size = 96, color } = {}) {
     this.size = size; this.mask = new Mask(size);
     const s = size, top = color ?? this.season.grass, r = this.r;
     const seg = 56, pg = new THREE.PlaneGeometry(s, s, seg, seg).rotateX(-Math.PI / 2), pos = pg.attributes.position, col = new Float32Array(pos.count * 3), base = new THREE.Color(top), c = new THREE.Color();
@@ -187,7 +187,7 @@ export class Kit {
     const gm = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ vertexColors: true, map: grainTex(9), roughness: 1 })); gm.receiveShadow = true; this.g.add(gm); this.own.push(gm.material);
     const mk = (w, h, y, cc, inset = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w - inset, h, w - inset), M(cc, { map: null })); m.position.y = y; return this.add(m, { shadow: false }); };
     mk(s, 0.6, -0.31, top, 0.02); mk(s, 2.2, -1.7, C.soil, 0.15); mk(s, 2.6, -4.1, C.rock, 0.5);
-    for (let i = 0; i < 14; i++) { const side = i % 4, t = r.range(-s / 2 + 3, s / 2 - 3), e = s / 2 - 0.2, k = r.range(0.6, 1.6); const m = new THREE.Mesh(rockGeo(i % 3), M(i % 2 ? C.rock : 0x8d8f96)); m.position.set(side === 0 ? e : side === 1 ? -e : t, r.range(-5, -2.2), side === 2 ? e : side === 3 ? -e : t); m.scale.set(k, k * 0.8, k); this.add(m, { shadow: false }); }
+    for (let i = 0; i < Math.round(14 * s / 60); i++) { const side = i % 4, t = r.range(-s / 2 + 3, s / 2 - 3), e = s / 2 - 0.2, k = r.range(0.6, 1.6); const m = new THREE.Mesh(rockGeo(i % 3), M(i % 2 ? C.rock : 0x8d8f96)); m.position.set(side === 0 ? e : side === 1 ? -e : t, r.range(-5, -2.2), side === 2 ? e : side === 3 ? -e : t); m.scale.set(k, k * 0.8, k); this.add(m, { shadow: false }); }
     return this;
   }
   patch(x, z, w, d, color, y = 0.02, kind = PAVED, tex = true) {
@@ -306,8 +306,10 @@ export class Kit {
       const b = new THREE.Mesh(unit(), M(C.concrete)); b.scale.set(w * 1.02, 0.2, d * 1.02); b.position.y = h + 0.1; grp.add(b);
     }
     this.g.add(grp);
-    const rr = rot ? Math.max(w, d) / 2 : 0;
-    if (solid) { this.obstacles.push(rot ? { x0: x - rr - 0.4, x1: x + rr + 0.4, z0: z - rr - 0.4, z1: z + rr + 0.4 } : { x0: x - w / 2 - 0.4, x1: x + w / 2 + 0.4, z0: z - d / 2 - 0.4, z1: z + d / 2 + 0.4 }); }
+    // what it stands on: exact for a building square to the grid (turned by quarter turns or not at all), a square round it otherwise
+    const q = Math.abs(rot) / (Math.PI / 2), quarter = Math.abs(q - Math.round(q)) < 0.01, odd = quarter && Math.round(q) % 2 === 1, rr = Math.max(w, d) / 2;
+    const hx = quarter ? (odd ? d : w) / 2 : rr, hz = quarter ? (odd ? w : d) / 2 : rr;
+    if (solid) this.obstacles.push({ x0: x - hx - 0.4, x1: x + hx + 0.4, z0: z - hz - 0.4, z1: z + hz + 0.4 });
     if (y < 1) this.mask.rect(x, z, w, d, rot, BUILT, 0.3);
     if (name) this.label(name, x, h + 3, z);
     return grp;
@@ -497,10 +499,11 @@ export class Kit {
     for (const t of this.tracks) { const dx = t.x2 - t.x1, dz = t.z2 - t.z1, L2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((x - t.x1) * dx + (z - t.z1) * dz) / L2)); if (Math.hypot(x - t.x1 - dx * u, z - t.z1 - dz * u) < t.half + (t.rail ? pad : padRoad)) return true; }
     return false;
   }
-  inWay(own) { return this.tracks.length > 0 && this.onTrack(own.x, own.z, own.low ? 1.0 : 1.7, own.low ? 0.4 : 0.9); }
-  // trees planted before a line was laid across them come out again
+  // true where a tree may not stand: on a line, inside a building, or in the water
+  inWay(own) { const v = this.mask.get(own.x, own.z); return v === BUILT || v === WATER || (this.tracks.length > 0 && this.onTrack(own.x, own.z, own.low ? 1.0 : 1.7, own.low ? 0.4 : 0.9)); }
+  // trees planted before a line was laid across them, or before a building went up on the spot, come out again
   clearTracks() {
-    if (!this.tracks.length) return 0; const gone = (own) => this.inWay(own), n = this.veg.drop(gone);
+    const gone = (own) => this.inWay(own), n = this.veg.drop(gone);
     this.treeSpots = this.treeSpots.filter((t) => !(t.own && gone(t.own))); this.obstacles = this.obstacles.filter((o) => !(o.own && gone(o.own))); return n;
   }
   // called once the recipe is done

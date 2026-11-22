@@ -41,6 +41,100 @@ export function stairs(k, x, z, w, d, steps = 5, rot = 0, color = C.stone) {
   for (let i = 0; i < steps; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(w, 0.3, d * (1 - i / steps)), k.mat(color)); s.position.set(0, 0.15 + i * 0.3, -d * (i / steps) / 2); s.receiveShadow = true; g.add(s); }
   k.g.add(g); return g;
 }
+// ---------- pieces of real buildings ----------
+// A building "faces" the way `rot` says: 0 south (+z, toward the camera's usual side), PI/2 east, PI north, -PI/2 west.
+const fwd = (rot, d) => [Math.sin(rot) * d, Math.cos(rot) * d];
+// a plain block that nobody walks into or around: trim, parapets, lanterns
+export function block(k, x, y, z, w, h, d, color, rot = 0) { const m = k.mesh(unitBox(), color); m.scale.set(w, h, d); m.position.set(x, y + h / 2, z); m.rotation.y = rot; return m; }
+// a dome on a drum, with a lantern, set on top of something at height y
+export function dome(k, x, z, r, y, { color = C.copper, drum = 0, drumColor = C.lime, lantern = true, squash = 1, seg = 18 } = {}) {
+  if (drum) { const d = k.mesh(new THREE.CylinderGeometry(r * 1.02, r * 1.06, drum, seg), drumColor); d.position.set(x, y + drum / 2, z); }
+  const m = k.mesh(new THREE.SphereGeometry(r, seg, 9, 0, Math.PI * 2, 0, Math.PI / 2), color); m.position.set(x, y + drum, z); m.scale.y = squash;
+  if (lantern) { const l = k.mesh(new THREE.CylinderGeometry(r * 0.16, r * 0.18, r * 0.36, 8), drumColor); l.position.set(x, y + drum + r * squash + r * 0.14, z); const c = k.mesh(new THREE.ConeGeometry(r * 0.2, r * 0.3, 8), color); c.position.set(x, y + drum + r * squash + r * 0.46, z); }
+  return m;
+}
+// columns, a pediment and steps on the front of a building
+export function portico(k, x, z, w, n, h, { rot = 0, color = C.lime, steps = 4, depth = 2, pediment = true } = {}) {
+  colonnade(k, x, z, w, n, h, { color, rot, pediment, depth });
+  if (steps) { const [dx, dz] = fwd(rot, depth / 2 + steps * 0.28); stairs(k, x + dx, z + dz, w + 1, steps * 0.6, steps, rot, C.stone); }
+}
+// a small classical lantern for the ridge of a Georgian hall
+export function cupola(k, x, y, z, s = 1, { color = C.white, capColor = C.copper, spire = false } = {}) {
+  block(k, x, y, z, 1.5 * s, 0.9 * s, 1.5 * s, color);
+  const l = k.mesh(new THREE.CylinderGeometry(0.55 * s, 0.6 * s, 1.3 * s, 8), color); l.position.set(x, y + 1.55 * s, z);
+  if (spire) { const c = k.mesh(new THREE.ConeGeometry(0.62 * s, 2.6 * s, 8), capColor); c.position.set(x, y + 3.5 * s, z); }
+  else { const c = k.mesh(new THREE.SphereGeometry(0.62 * s, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), capColor); c.position.set(x, y + 2.2 * s, z); const f = k.mesh(new THREE.ConeGeometry(0.1 * s, 0.8 * s, 5), capColor); f.position.set(x, y + 3.1 * s, z); }
+}
+// a tower. kind: 'spire' (church), 'crown' (Gothic pinnacles), 'pyramid' (belfry under a pointed roof), 'dome' (lantern and dome), 'flat' (battlements), 'point' (a campanile)
+export function steeple(k, x, z, w, h, { color = C.stone, kind = 'spire', capColor = C.slate, clock = false, win = 'tall', trim = C.lime } = {}) {
+  k.box(x, z, w, w, h, { color, roof: 'none', win });
+  const top = (geo, c, y, sx, sy, sz, ry = 0) => { const m = k.mesh(geo, c); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.y = ry; return m; };
+  const pyr = () => new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4);
+  const pins = (y, s, c = color) => { for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { block(k, x + a * w * 0.44, y, z + b * w * 0.44, w * 0.16, s * 0.7, w * 0.16, c); const m = k.mesh(pyr(), c); m.position.set(x + a * w * 0.44, y + s * 0.7 + s * 0.35, z + b * w * 0.44); m.scale.set(w * 0.2, s * 0.7, w * 0.2); } };
+  if (kind === 'spire') { block(k, x, h, z, w * 0.9, w * 0.9, w * 0.9, trim); top(new THREE.ConeGeometry(w * 0.52, h * 0.55, 8), capColor, h + w * 0.9 + h * 0.275, 1, 1, 1); }
+  else if (kind === 'crown') { block(k, x, h, z, w * 0.8, w * 0.9, w * 0.8, color); pins(h, w * 0.9); const o = k.mesh(new THREE.CylinderGeometry(w * 0.3, w * 0.36, w * 0.9, 8), color); o.position.set(x, h + w * 1.35, z); top(new THREE.ConeGeometry(w * 0.34, w * 0.8, 8), capColor, h + w * 2.2, 1, 1, 1); }
+  else if (kind === 'pyramid') { block(k, x, h, z, w * 1.08, w * 0.7, w * 1.08, trim); top(pyr(), capColor, h + w * 0.7 + w * 0.65, w * 1.16, w * 1.3, w * 1.16); }
+  else if (kind === 'point') { block(k, x, h, z, w * 1.1, w * 0.25, w * 1.1, trim); for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) block(k, x + a * w * 0.42, h + w * 0.25, z + b * w * 0.42, w * 0.18, w * 0.9, w * 0.18, color); block(k, x, h + w * 1.15, z, w * 1.1, w * 0.2, w * 1.1, trim); pins(h + w * 1.35, w * 0.5); top(pyr(), color, h + w * 1.35 + w * 0.75, w * 0.8, w * 1.5, w * 0.8); }
+  else if (kind === 'dome') { const o = k.mesh(new THREE.CylinderGeometry(w * 0.46, w * 0.5, w * 0.8, 8), trim); o.position.set(x, h + w * 0.4, z); dome(k, x, z, w * 0.48, h + w * 0.8, { color: capColor, drumColor: trim }); }
+  else if (kind === 'flat') { for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]]) block(k, x + a * w * 0.42, h, z + b * w * 0.42, w * 0.2, w * 0.22, w * 0.2, color); }
+  if (clock) for (const a of [0, 1, 2, 3]) { const f = k.mesh(new THREE.CylinderGeometry(w * 0.3, w * 0.3, 0.08, 14).rotateX(Math.PI / 2), 0xf4f2ec); const [dx, dz] = fwd(a * Math.PI / 2, w / 2 + 0.03); f.position.set(x + dx, h - w * 0.55, z + dz); f.rotation.y = a * Math.PI / 2; }
+  return k;
+}
+// four ranges round a court. open: any of 'n','s','e','w' leaves a gateway in that side
+export function quad(k, x, z, w, d, { t = 4, h = 5, color = C.stone, roof = 'gable', roofColor = C.slate, win = 'grid', open = '', gap = 4, lawn = true } = {}) {
+  const range = (name, cx, cz, len, alongX) => {
+    const mk = (c, l) => (alongX ? k.box(cx + c, cz, l, t, h, { color, roof, roofColor, win, plain: true }) : k.box(cx, cz + c, t, l, h, { color, roof, roofColor, win, plain: true }));
+    if (open.includes(name)) { const l = (len - gap) / 2; mk(-(gap + l) / 2, l); mk((gap + l) / 2, l); } else mk(0, len);
+  };
+  range('n', x, z - d / 2 + t / 2, w, true); range('s', x, z + d / 2 - t / 2, w, true); range('w', x - w / 2 + t / 2, z, d - 2 * t, false); range('e', x + w / 2 - t / 2, z, d - 2 * t, false);
+  if (lawn) k.lawn(x, z, w - 2 * t - 2, d - 2 * t - 2);
+}
+// a covered walk on arches, as round a mission quad or a cloister
+export function arcade(k, x1, z1, x2, z2, { h = 2.6, color = C.sand, roofColor = C.red, depth = 2 } = {}) {
+  const L = Math.hypot(x2 - x1, z2 - z1), rot = Math.atan2(x2 - x1, z2 - z1), n = Math.max(2, Math.round(L / 2.2));
+  for (let i = 0; i <= n; i++) { const t = i / n; block(k, x1 + (x2 - x1) * t, 0, z1 + (z2 - z1) * t, 0.5, h, depth * 0.3, color, rot + Math.PI / 2); }
+  block(k, (x1 + x2) / 2, h, (z1 + z2) / 2, depth, 0.45, L + 0.6, color, rot); const r = k.mesh(new THREE.CylinderGeometry(0.01, 1, 1, 3, 1).rotateZ(0).rotateY(Math.PI / 2), roofColor); r.scale.set(depth * 0.62, 0.7, L * 0.58 + 0.4); r.position.set((x1 + x2) / 2, h + 0.8, (z1 + z2) / 2); r.rotation.y = rot;
+}
+// a hall in collegiate Gothic: a steep roof and pinnacles at the corners
+export function gothic(k, x, z, w, d, h, { color = 0xb9ad98, roofColor = C.slate, rot = 0, pin = true, name } = {}) {
+  k.box(x, z, w, d, h, { color, roof: 'gable', roofColor, win: 'tall', rot, roofH: Math.min(w, d) * 0.6, plain: true, name });
+  if (pin) for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const px = a * w / 2, pz = b * d / 2, X = x + px * Math.cos(rot) + pz * Math.sin(rot), Z = z - px * Math.sin(rot) + pz * Math.cos(rot); block(k, X, 0, Z, 0.7, h + 1.2, 0.7, color, rot); const m = k.mesh(new THREE.ConeGeometry(0.5, 1.6, 4).rotateY(Math.PI / 4), color); m.position.set(X, h + 2, Z); }
+}
+// a college chapel: a long high nave with turrets at the four corners and a great window
+export function chapel(k, x, z, w, d, h, { color = C.lime, roofColor = C.slate, rot = 0, turrets = true, name } = {}) {
+  k.box(x, z, w, d, h, { color, roof: 'gable', roofColor, win: 'tall', rot, roofH: Math.min(w, d) * 0.55, plain: true, name });
+  const at = (px, pz) => [x + px * Math.cos(rot) + pz * Math.sin(rot), z - px * Math.sin(rot) + pz * Math.cos(rot)], long = d >= w;
+  if (turrets) for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const [X, Z] = at(a * w / 2, b * d / 2); const t = k.mesh(new THREE.CylinderGeometry(0.55, 0.6, h + 3, 8), color); t.position.set(X, (h + 3) / 2, Z); const c = k.mesh(new THREE.ConeGeometry(0.62, 1.8, 8), color); c.position.set(X, h + 3.9, Z); }
+  const n = Math.max(2, Math.round((long ? d : w) / 3)); for (let i = 1; i < n; i++) for (const sgn of [-1, 1]) { const u = -0.5 + i / n, [X, Z] = long ? at(sgn * w / 2, u * d) : at(u * w, sgn * d / 2); block(k, X, 0, Z, 0.5, h + 0.9, 0.5, color, rot); }
+}
+// a gateway: two piers and something across the top
+export function gate(k, x, z, w = 5, h = 4, { rot = 0, color = C.brick, iron = true } = {}) {
+  const [ax, az] = fwd(rot + Math.PI / 2, w / 2);
+  for (const sgn of [-1, 1]) { block(k, x + ax * sgn, 0, z + az * sgn, 1, h, 1, color, rot); const c = k.mesh(new THREE.SphereGeometry(0.4, 8, 6), C.lime); c.position.set(x + ax * sgn, h + 0.35, z + az * sgn); }
+  if (iron) { const a = k.mesh(new THREE.TorusGeometry(w / 2 - 0.4, 0.09, 5, 14, Math.PI), C.dark); a.position.set(x, h * 0.72, z); a.rotation.y = rot; block(k, x, h * 0.7, z, w - 1, 0.12, 0.12, C.dark, rot); }
+}
+// a landmark a long way off, at the edge of the slab. kind: 'cn', 'space', 'tv'
+export function needle(k, x, z, h = 26, kind = 'cn') {
+  const m = (geo, c, y) => { const o = k.mesh(geo, c); o.position.set(x, y, z); return o; };
+  if (kind === 'cn') { m(new THREE.CylinderGeometry(0.35, 1.3, h * 0.66, 6), C.concrete, h * 0.33); m(new THREE.CylinderGeometry(1.5, 1.0, h * 0.06, 12), 0xdfe3e6, h * 0.69); m(new THREE.CylinderGeometry(0.9, 1.3, h * 0.04, 12), C.dark, h * 0.64); m(new THREE.CylinderGeometry(0.06, 0.3, h * 0.3, 5), 0xdfe3e6, h * 0.86); }
+  else if (kind === 'space') { m(new THREE.CylinderGeometry(0.3, 1.5, h * 0.5, 3), C.white, h * 0.25); m(new THREE.CylinderGeometry(0.9, 0.3, h * 0.36, 3), C.white, h * 0.68); m(new THREE.CylinderGeometry(2.6, 1.6, h * 0.05, 16), C.white, h * 0.88); m(new THREE.CylinderGeometry(1.4, 2.6, h * 0.04, 16), 0xe08a3c, h * 0.925); m(new THREE.CylinderGeometry(0.04, 0.2, h * 0.14, 5), C.white, h * 1.01); }
+  else { m(new THREE.CylinderGeometry(0.4, 1.0, h * 0.62, 10), C.concrete, h * 0.31); m(new THREE.SphereGeometry(h * 0.075, 12, 8), 0xc9ced2, h * 0.66); m(new THREE.CylinderGeometry(0.08, 0.3, h * 0.34, 5), 0xd9d4c8, h * 0.86); for (let i = 0; i < 3; i++) m(new THREE.CylinderGeometry(0.2, 0.2, h * 0.02, 6), C.red, h * (0.76 + i * 0.07)); }
+  k.obstacles.push({ x0: x - 1.6, x1: x + 1.6, z0: z - 1.6, z1: z + 1.6 }); k.mask.disc(x, z, 1.8, 1.8, 4);
+}
+// an oval bowl of stands round a pitch
+export function stadium(k, x, z, rx, rz, { h = 4, color = C.concrete, pitch = true } = {}) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 0.74, 1, 30, 1, true), k.mat(color, { side: THREE.DoubleSide })); m.scale.set(rx, h, rz); m.position.set(x, h / 2, z); k.add(m);
+  if (pitch) { k.lawn(x, z, rx * 1.1, rz * 1.1); for (let i = -2; i <= 2; i++) k.patch(x + i * rx * 0.2, z, rx * 0.1, rz * 1.0, 0x86b06a, 0.045, 1, false); }
+  k.obstacles.push({ x0: x - rx, x1: x + rx, z0: z - rz, z1: z + rz }); k.mask.disc(x, z, rx, rz, 4);
+}
+// a street: tarmac with a pale line down the middle
+export function road(k, pts, w = 3.4, color = 0x7d8087) { k.path(pts, w, color, 0.035); k.path(pts, 0.14, 0xe9e2c6, 0.05); return k; }
+// a terrace of town buildings along a line, for the street at the edge of a campus
+export function terrace(k, x1, z1, x2, z2, { n = 5, h = 5, depth = 6, colors = [C.brick, C.lime, C.brickDark, 0xd8c7a6], roof = 'flat', roofColor = C.roof, win = 'grid' } = {}) {
+  const L = Math.hypot(x2 - x1, z2 - z1), rot = Math.atan2(x2 - x1, z2 - z1) + Math.PI / 2, w = L / n;
+  for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; k.box(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t, w * 0.94, depth, h * k.r.range(0.8, 1.25), { color: colors[i % colors.length], roof, roofColor, win, rot, plain: true }); }
+}
+
 export function chimney(k, x, z, h, r = 0.9, color = C.brickDark) {
   k.cyl(x, z, r, h, { color, roof: 'none', seg: 10, top: r * 0.7 });
   const cap = k.mesh(new THREE.CylinderGeometry(r * 0.82, r * 0.74, 0.5, 10), C.dark); cap.position.set(x, h + 0.2, z);
@@ -101,7 +195,7 @@ export function horse(k, x, z, color = 0x4a3a30) {
 }
 export { THREE };
 
-import { WILD, LAWN, PAVED, WATER, G, M } from './kit.js';
+import { WILD, LAWN, PAVED, WATER, BUILT, G, M } from './kit.js';
 
 const unitBox = () => G('box', () => new THREE.BoxGeometry(1, 1, 1));
 const bx = (k, color, x, y, z, sx, sy, sz, ry = 0) => { const m = new THREE.Mesh(unitBox(), M(color)); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.y = ry; m.castShadow = true; k.g.add(m); return m; };
@@ -216,11 +310,15 @@ export function life(k, loops, o = {}) {
   if (mower && fair) k.mower(...mower);
   const d = k.door, s = k.spawn;
   k.glowLine(o.line || [[s.x, s.z - 1], [(s.x + d.x) / 2, (s.z + d.z) / 2 + 2], [d.x, d.z + 0.6]]);
+  // places to take a sample: near the way in, and further off. Each is moved on to open ground if it has landed in a building or in water.
+  const lim = k.size / 2 - 2, clear = (x, z) => Math.abs(x) < lim && Math.abs(z) < lim && !k.blocked(x, z) && ![WATER, BUILT].includes(k.mask.get(x, z));
+  const settle = (x, z) => { if (clear(x, z)) return [x, z]; for (let rr = 1.5; rr < 15; rr += 1.5) for (let a = 0; a < 8; a++) { const nx = x + Math.cos(a * Math.PI / 4) * rr, nz = z + Math.sin(a * Math.PI / 4) * rr; if (clear(nx, nz)) return [nx, nz]; } return [x, z]; };
+  const put = (x, z, zone) => { const [nx, nz] = settle(x, z); if (!k.spots.some((q) => Math.hypot(q.x - nx, q.z - nz) < 2.4)) k.spot(nx, nz, zone); };
   const far = [];
-  for (const L of loops) for (const [x, z] of L) { const dd = Math.hypot(x - s.x, z - s.z); if (dd > 4) (dd < 22 ? k.spot(x + r.range(-1.5, 1.5), z + r.range(-1.5, 1.5), 'a') : far.push([x, z])); }
-  for (const [x, z] of far) k.spot(x + r.range(-1.5, 1.5), z + r.range(-1.5, 1.5), 'b');
+  for (const L of loops) for (const [x, z] of L) { const dd = Math.hypot(x - s.x, z - s.z); if (dd > 4) (dd < 22 ? put(x + r.range(-1.5, 1.5), z + r.range(-1.5, 1.5), 'a') : far.push([x + r.range(-1.5, 1.5), z + r.range(-1.5, 1.5)])); }
+  const keep = Math.max(1, Math.ceil(far.length / 9)); far.forEach(([x, z], i) => { if (i % keep === 0) put(x, z, 'b'); });
   const e = k.size / 2 - 5;
-  for (const [x, z] of [[-e, -e + 4], [e, -e + 6], [-e + 3, e - 14], [e - 2, 4], [0, -e + 2]]) k.spot(x, z, 'b');
+  for (const [x, z] of [[-e, -e + 4], [e, -e + 6], [-e + 3, e - 14], [e - 2, 4], [0, -e + 2]]) put(x, z, 'b');
   // a school group on a visit
   if (tour) { const [x, z] = tour; k.npc(x, z, { role: 'guide', idle: 'wave', top: 0x2f6f8f, pack: false }); for (let i = 0; i < 3; i++) k.npc(x + 1.0 + i * 0.75, z + 0.9 + (i % 2) * 0.5, { kind: 'schoolkid', role: 'schoolkid', face: [x, z] }); }
   const all = loops.flat(), beside = (pt, within = 4.2, apart = 3.4) => k.find([LAWN, WILD], { near: pt, within, apart, margin: 3 }), open = (apart = 6.5) => k.find([LAWN, WILD], { apart, margin: 5 });

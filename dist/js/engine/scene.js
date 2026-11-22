@@ -74,7 +74,7 @@ export function setHour(h) {
   if (dull < 1) { top.lerp(new THREE.Color(0xc9d0d6), 0.6); bot.lerp(new THREE.Color(0xdfe3e6), 0.6); }
   document.documentElement.style.setProperty('--sky-top', '#' + top.getHexString());
   document.documentElement.style.setProperty('--sky-bot', '#' + bot.getHexString());
-  W.scene.fog = new THREE.Fog(new THREE.Color(s.haze).lerp(bot, 0.5), dull < 1 ? 110 : 150, dull < 1 ? 300 : 400);
+  const far = W.big || 1; W.scene.fog = new THREE.Fog(new THREE.Color(s.haze).lerp(bot, 0.5), (dull < 1 ? 110 : 150) * far, (dull < 1 ? 300 : 400) * far);
   const glow = clamp(1 - mid * 2.2, 0, 1);
   if (W.kit) { for (const m of W.kit.windowMats) m.emissiveIntensity = glow * 1.6 + (dull < 1 ? 0.35 : 0); for (const m of W.kit.lampMats) m.emissiveIntensity = 0.25 + glow * 2 + (dull < 1 ? 0.5 : 0); }
 }
@@ -97,9 +97,12 @@ export function loadPlace(recipe, { season = 'fall', hour = 9, seed = 'x', az, p
   const kit = new Kit(W.world, { season, seed, gfx: W.gfx, wind: W.wind }); kit.tags = tags; W.kit = kit;
   recipe(kit, flags); kit.clearTracks();
   scatter(kit); airborne(kit); kit.finish();
-  if (W.gfx > 0) kit.clouds(W.gfx === 2 ? 6 : 3);
+  if (W.gfx > 0) kit.clouds(W.gfx === 2 ? 9 : 4);
+  // everything that frames the slab goes by its size: how far back the camera sits, how far it may go, where the haze starts, what the sun's shadow covers
+  const big = kit.size / 60; W.big = big; W.fit = 122 * big;
+  const sc = W.sun.shadow.camera, half = 48 * big; sc.left = -half; sc.right = half; sc.top = half; sc.bottom = -half; sc.far = 240 * big; sc.updateProjectionMatrix();
   setHour(hour);
-  W.az = az ?? 0.75; W.pol = pol ?? 0.98; W.dist = dist ?? 122; W.target.set(0, 2, 0);
+  W.az = az ?? 0.75; W.pol = pol ?? 0.98; W.dist = dist ?? W.fit; W.target.set(0, 2, 0);
   W.student = makeStudent(kit); W.avatar = W.student.g; W.avatar.position.set(kit.spawn.x, 0, kit.spawn.z); W.actors.add(W.avatar);
   W.folio = companions.folio ? makeFolio() : null; if (W.folio) { W.folio.position.set(kit.spawn.x + 1.4, 0, kit.spawn.z + 1); W.actors.add(W.folio); }
   W.wrenP = companions.wren ? makeWren(kit) : null; W.wren = W.wrenP ? W.wrenP.g : null; if (W.wren) { W.wren.position.set(kit.spawn.x - 1.3, 0, kit.spawn.z + 1.2); W.actors.add(W.wren); }
@@ -183,14 +186,14 @@ function bindInput(c) {
   c.addEventListener('pointermove', (e) => {
     if (!pts.has(e.pointerId)) { const now = performance.now(); if (now - lastHover > 70 && W.handlers.active && W.handlers.active()) { lastHover = now; c.style.cursor = pickAt(e) ? 'pointer' : 'grab'; } return; }
     pts.set(e.pointerId, e);
-    if (pts.size === 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); if (pinch) W.dist = clamp(W.dist * pinch / d, 38, 170); pinch = d; moved = true; return; }
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); if (pinch) W.dist = clamp(W.dist * pinch / d, 38, 170 * (W.big || 1)); pinch = d; moved = true; return; }
     if (!down) return; const dx = e.clientX - down.x, dy = e.clientY - down.y;
     if (Math.abs(dx) + Math.abs(dy) > 5) moved = true;
     if (moved) { W.az = down.az - dx * 0.006; W.pol = clamp(down.pol - dy * 0.005, 0.35, 1.42); W.auto = false; c.style.cursor = 'grabbing'; }
   });
   const up = (e) => { pts.delete(e.pointerId); if (down && !moved && pts.size === 0) click(e); if (pts.size === 0) down = null; };
   c.addEventListener('pointerup', up); c.addEventListener('pointercancel', (e) => { pts.delete(e.pointerId); down = null; });
-  c.addEventListener('wheel', (e) => { e.preventDefault(); W.dist = clamp(W.dist * (1 + Math.sign(e.deltaY) * 0.08), 38, 170); }, { passive: false });
+  c.addEventListener('wheel', (e) => { e.preventDefault(); W.dist = clamp(W.dist * (1 + Math.sign(e.deltaY) * 0.08), 38, 170 * (W.big || 1)); }, { passive: false });
   window.addEventListener('keydown', (e) => { if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; W.keys[e.key.toLowerCase()] = true; });
   window.addEventListener('keyup', (e) => { W.keys[e.key.toLowerCase()] = false; });
 }
@@ -251,7 +254,7 @@ function loop(now) {
   if (live) {
     if (k['arrowleft']) W.az += dt * 1.2; if (k['arrowright']) W.az -= dt * 1.2;
     if (k['arrowup']) W.pol = clamp(W.pol - dt * 0.8, 0.35, 1.42); if (k['arrowdown']) W.pol = clamp(W.pol + dt * 0.8, 0.35, 1.42);
-    if (k['='] || k['+']) W.dist = clamp(W.dist * (1 - dt), 38, 170); if (k['-']) W.dist = clamp(W.dist * (1 + dt), 38, 170);
+    if (k['='] || k['+']) W.dist = clamp(W.dist * (1 - dt), 38, 170 * (W.big || 1)); if (k['-']) W.dist = clamp(W.dist * (1 + dt), 38, 170 * (W.big || 1));
     if (W.avatar && (k['w'] || k['a'] || k['s'] || k['d'])) {
       const f = (k['w'] ? 1 : 0) - (k['s'] ? 1 : 0), r = (k['d'] ? 1 : 0) - (k['a'] ? 1 : 0);
       const fx = -Math.sin(W.az), fz = -Math.cos(W.az), rx = Math.cos(W.az), rz = -Math.sin(W.az);
@@ -262,7 +265,7 @@ function loop(now) {
   if (W.kit) { if (W.avatar) { W.kit.player.x = W.avatar.position.x; W.kit.player.z = W.avatar.position.z; } for (const f of W.kit.anim) f(W.t, dt); }
   let walking = false;
   if (W.avatar && W.goal) {
-    const res = stepActor(W.avatar, W.goal.x, W.goal.z, 7.5, dt, 0.12); walking = res === 0;
+    const res = stepActor(W.avatar, W.goal.x, W.goal.z, 7.5 * Math.sqrt(W.big || 1), dt, 0.12);   // a longer stride on a bigger slab walking = res === 0;
     if (res === -1) W.stuck += dt; else W.stuck = Math.max(0, W.stuck - dt);
     const late = W.sure && W.onArrive && performance.now() > W.by;   // a slow machine should not keep anyone waiting for a door
     if (late && !blocked(W.goal.x, W.goal.z)) W.avatar.position.set(W.goal.x, 0, W.goal.z);
@@ -271,10 +274,12 @@ function loop(now) {
   if (W.student) { W.stride = (W.stride || 0) + (walking ? dt * 11 : 0); stride(W.student, W.stride, walking ? 0.6 : 0); W.avatar.position.y = walking ? Math.abs(Math.sin(W.stride)) * 0.05 : 0; }
   if (W.avatar) {
     const a = W.avatar.position;
-    if (W.folio) { const d = Math.hypot(a.x - W.folio.position.x, a.z - W.folio.position.z); if (d > 2.2) stepActor(W.folio, a.x, a.z, 7.2, dt, 2); }
-    if (W.wren) { const d = Math.hypot(a.x - W.wren.position.x, a.z - W.wren.position.z), run = d > 2.6; if (run) stepActor(W.wren, a.x, a.z, 7.8, dt, 2.2); W.wrenStride = (W.wrenStride || 0) + (run ? dt * 15 : 0); stride(W.wrenP, W.wrenStride, run ? 0.7 : 0); W.wren.position.y = run ? Math.abs(Math.sin(W.wrenStride)) * 0.09 : 0; }
+    if (W.folio) { const d = Math.hypot(a.x - W.folio.position.x, a.z - W.folio.position.z); if (d > 2.2) stepActor(W.folio, a.x, a.z, 7.2 * Math.sqrt(W.big || 1), dt, 2); }
+    if (W.wren) { const d = Math.hypot(a.x - W.wren.position.x, a.z - W.wren.position.z), run = d > 2.6; if (run) stepActor(W.wren, a.x, a.z, 7.8 * Math.sqrt(W.big || 1), dt, 2.2); W.wrenStride = (W.wrenStride || 0) + (run ? dt * 15 : 0); stride(W.wrenP, W.wrenStride, run ? 0.7 : 0); W.wren.position.y = run ? Math.abs(Math.sin(W.wrenStride)) * 0.09 : 0; }
   }
   for (const m of W.markers) { m.gem.rotation.y = W.t * 1.2; m.gem.position.y = m.y0 + Math.sin(W.t * 1.8 + m.d.x) * 0.12; m.ring.scale.setScalar(1 + Math.sin(W.t * 2 + m.d.z) * 0.05); }
+  // zoomed out, the camera looks at the middle of the slab. The closer it comes, the more it keeps the student in the middle instead.
+  if (W.avatar && W.fit) { const near = clamp((W.fit - W.dist) / (W.fit - 50), 0, 1), ease = Math.min(1, dt * 3); W.target.x += (W.avatar.position.x * near - W.target.x) * ease; W.target.z += (W.avatar.position.z * near - W.target.z) * ease; }
   const cp = Math.cos(W.pol), sp = Math.sin(W.pol);
   W.camera.position.set(W.target.x + Math.sin(W.az) * sp * W.dist, W.target.y + cp * W.dist, W.target.z + Math.cos(W.az) * sp * W.dist);
   W.camera.lookAt(W.target); W.sun.target.position.copy(W.target);
@@ -282,7 +287,7 @@ function loop(now) {
   const w = window.innerWidth, h = window.innerHeight, v = new THREE.Vector3();
   for (const L of W.labelNodes) {
     v.copy(L.p).project(W.camera);
-    const vis = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05 && (L.kind !== 'sign' || W.dist < 84);
+    const vis = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05 && (L.kind !== 'sign' || W.dist < 84 * (W.big || 1));
     L.n.style.display = vis ? '' : 'none';
     if (vis) L.n.style.transform = `translate(-50%,-100%) translate(${((v.x + 1) / 2) * w}px,${((1 - v.y) / 2) * h}px)`;
   }

@@ -30,10 +30,10 @@ function instanced(k, geo, mat, list, { shadow = false } = {}) { // list: [x,y,z
 }
 
 export function scatter(k) {
-  const r = k.r.fork('scatter'), S = k.seasonName, e = k.size / 2 - 0.5, sn = k.season, col = new THREE.Color();
+  const r = k.r.fork('scatter'), S = k.seasonName, e = k.size / 2 - 0.5, sn = k.season, col = new THREE.Color(), area = (k.size / 60) ** 2;   // counts below were tuned on a slab 60 across
   const vary = (hex, l = 0.06) => col.set(hex).offsetHSL(r.range(-0.015, 0.015), r.range(-0.05, 0.05), r.range(-l, l)).getHex();
   // grass
-  const want = [0, 3200, 6400][k.gfx], tufts = [];
+  const want = Math.round([0, 3200, 6400][k.gfx] * area), tufts = [];
   for (let i = 0; i < want * 2.2 && tufts.length < want; i++) {
     const x = r.range(-e, e), z = r.range(-e, e), v = k.mask.get(x, z);
     if (v === WILD) { if (S === 'winter' && r.chance(0.72)) continue; const h = S === 'winter' ? r.range(0.18, 0.4) : r.range(0.34, 0.8) * (S === 'summer' ? 1.15 : 1); tufts.push([x, 0, z, r.u() * 6.28, r.range(0.8, 1.5), h, r.range(0.8, 1.5), vary(r.pick(sn.tuft))]); }
@@ -43,19 +43,19 @@ export function scatter(k) {
   // wildflowers in drifts
   if (sn.flowers.length && k.gfx > 0) {
     const fl = [], st = [];
-    for (let c = 0; c < 22; c++) { const p = k.find([WILD], { apart: 2, margin: 2 }); if (!p) break; const hue = r.pick(sn.flowers); for (let i = 0; i < r.int(7, 16); i++) { const x = p[0] + r.range(-1.7, 1.7), z = p[1] + r.range(-1.7, 1.7); if (k.mask.get(x, z) !== WILD) continue; const h = r.range(0.25, 0.5); fl.push([x, h, z, r.u() * 6, 0.09, 0.06, 0.09, vary(hue, 0.04)]); st.push([x, 0, z, r.u() * 6, 0.25, h, 0.25, vary(0x5f9a4f)]); } }
+    for (let c = 0; c < Math.round(22 * area); c++) { const p = k.find([WILD], { apart: 2, margin: 2 }); if (!p) break; const hue = r.pick(sn.flowers); for (let i = 0; i < r.int(7, 16); i++) { const x = p[0] + r.range(-1.7, 1.7), z = p[1] + r.range(-1.7, 1.7); if (k.mask.get(x, z) !== WILD) continue; const h = r.range(0.25, 0.5); fl.push([x, h, z, r.u() * 6, 0.09, 0.06, 0.09, vary(hue, 0.04)]); st.push([x, 0, z, r.u() * 6, 0.25, h, 0.25, vary(0x5f9a4f)]); } }
     instanced(k, G('ico0', () => new THREE.IcosahedronGeometry(1, 0)), windy(new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.8 }), k.wind, 0.0), fl);
     instanced(k, tuftGeo(), windy(new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, flatShading: true }), k.wind), st);
   }
   // fallen leaves in autumn, more of them under the trees
   if (S === 'fall' && k.gfx > 0) {
-    const lv = [], n = k.gfx === 2 ? 900 : 450;
+    const lv = [], n = Math.round((k.gfx === 2 ? 900 : 450) * area);
     for (let i = 0; i < n; i++) { let x, z; if (k.treeSpots.length && r.chance(0.7)) { const t = r.pick(k.treeSpots), a = r.u() * 6.28, d = Math.sqrt(r.u()) * 3.4; x = t.x + Math.cos(a) * d; z = t.z + Math.sin(a) * d; } else { x = r.range(-e, e); z = r.range(-e, e); } const v = k.mask.get(x, z); if (v === WATER || v === BUILT || v === 9) continue; lv.push([x, 0.07, z, r.u() * 6.28, 0.2, 1, 0.13, vary(r.pick(sn.trees), 0.05), 0, r.range(-0.2, 0.2)]); }
     instanced(k, G('leafq', () => new THREE.CircleGeometry(1, 4).rotateX(-Math.PI / 2)), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, side: THREE.DoubleSide }), lv);
   }
   // rocks and low shrubs out on the rough grass
-  for (let i = 0; i < 9; i++) { const p = k.find([WILD], { apart: 4, margin: 2 }); if (p) k.tree(p[0], p[1], k.tags.includes('desert') ? 'scrub' : 'bush', r.range(0.7, 1.1)); }
-  for (let i = 0; i < 8; i++) { const p = k.find([WILD], { apart: 3, margin: 1.5 }); if (p) { k.rock(p[0], p[1], r.range(0.35, 0.9)); if (r.chance(0.5)) k.rock(p[0] + r.range(-0.8, 0.8), p[1] + r.range(-0.8, 0.8), r.range(0.2, 0.45)); } }
+  for (let i = 0; i < Math.round(9 * area); i++) { const p = k.find([WILD], { apart: 4, margin: 2 }); if (p) k.tree(p[0], p[1], k.tags.includes('desert') ? 'scrub' : 'bush', r.range(0.7, 1.1)); }
+  for (let i = 0; i < Math.round(8 * area); i++) { const p = k.find([WILD], { apart: 3, margin: 1.5 }); if (p) { k.rock(p[0], p[1], r.range(0.35, 0.9)); if (r.chance(0.5)) k.rock(p[0] + r.range(-0.8, 0.8), p[1] + r.range(-0.8, 0.8), r.range(0.2, 0.45)); } }
   // reeds where grass meets water, lily pads on still ponds
   const pads = [];
   for (const w of k.waterAreas) {
@@ -65,7 +65,7 @@ export function scatter(k) {
   }
   instanced(k, G('pad', () => new THREE.CircleGeometry(1, 9, 0.3, Math.PI * 1.85).rotateX(-Math.PI / 2)), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 }), pads);
   // snow lying against things in winter
-  if (S === 'winter') for (let i = 0; i < 26; i++) { const p = k.find([WILD, LAWN], { apart: 2.2, margin: 1.5 }); if (p) k.put(blob(1), p[0], 0.02, p[1], r.range(0.9, 2.2), r.range(0.1, 0.22), r.range(0.9, 2.2), 0xf7f9fb, 0, 0, r.u() * 3, 0, 0.01); }
+  if (S === 'winter') for (let i = 0; i < Math.round(26 * area); i++) { const p = k.find([WILD, LAWN], { apart: 2.2, margin: 1.5 }); if (p) k.put(blob(1), p[0], 0.02, p[1], r.range(0.9, 2.2), r.range(0.1, 0.22), r.range(0.9, 2.2), 0xf7f9fb, 0, 0, r.u() * 3, 0, 0.01); }
 }
 
 // What is in the air: leaves, snow, petals, seeds, rain. One Points object, moved by the shader.
@@ -77,7 +77,7 @@ export function airborne(k) {
     : S === 'winter' ? { n: 260, a: 0xffffff, b: 0xeef3f7, size: 3.2, fall: 0.85, sway: 0.9, op: 0.9 }
     : S === 'spring' ? { n: 50, a: 0xf7d3dc, b: 0xffffff, size: 3.6, fall: 0.5, sway: 2.1, op: 0.9 }
     : { n: 30, a: 0xffffff, b: 0xf7f3d8, size: 2.6, fall: 0.1, sway: 1.5, op: 0.7 };
-  const n = Math.round(cfg.n * (k.gfx === 2 ? 1 : 0.6)), pos = new Float32Array(n * 3), seed = new Float32Array(n), r = k.r.fork('air'), half = k.size / 2 + 4;
+  const n = Math.round(cfg.n * (k.gfx === 2 ? 1 : 0.6) * (k.size / 60) ** 2), pos = new Float32Array(n * 3), seed = new Float32Array(n), r = k.r.fork('air'), half = k.size / 2 + 4;
   for (let i = 0; i < n; i++) { pos[i * 3] = r.range(-half, half); pos[i * 3 + 1] = r.range(0, 26); pos[i * 3 + 2] = r.range(-half, half); seed[i] = r.u(); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
   const mat = new THREE.ShaderMaterial({
