@@ -51,41 +51,29 @@ export function sources() {
     p.append(el('p', 'Every session is about real work by real people. The recordings describe that work in the third person, and each plate says “Dramatization” because the settings and the staging are ours. Where a name is listed as credited, that person is named on the plate and here and is not shown.'), el('p', 'The Common Shelf, Deckle, Marginalia, Octavo, Folio, the Larch family and every reader, title and number in the case are invented. The numbers come from one seeded simulation that ships with the game.'));
     p.append(el('h3', 'Research behind the story'), el('p', 'Fleder and Hosanagar (2009), on recommenders and the diversity of sales. Chaney, Stewart and Engelhardt (2018), on algorithmic confounding. Schnabel and colleagues (2016), “Recommendations as Treatments”. Li, Chu, Langford and Schapire (2010), on randomized exposure in news recommendation. Shumailov and colleagues (2024), on models trained on their own output.'));
     for (const part of [1, 2, 3, 4]) { p.append(el('h3', 'Part ' + PARTS[part].roman + ': ' + PARTS[part].title)); const ul = el('ul', { style: { fontSize: '0.9em', paddingLeft: '1.1rem' } }); for (const x of SESSIONS.filter((q) => q.part === part)) for (const src of x.src) ul.append(el('li', src)); p.append(ul); }
-    p.append(el('h3', 'Made with'), el('p.note', 'three.js (MIT licence). Typefaces: Atkinson Hyperlegible, DM Mono and Caveat (SIL Open Font Licence). Octavo’s reading is Lewis Carroll’s “Alice’s Adventures in Wonderland” of 1865, which is in the public domain. All pictures are drawn by the program. All sound is made in your browser.'));
+    p.append(el('h3', 'Made with'), el('p.note', MADE_WITH));
   }, { wide: true });
 }
 
 // ---- credits ----
-export const CREATOR = { name: 'Cantay Caliskan', letters: 'PhD, MBA', title: 'Associate Professor of Instruction in Data Science and Artificial Intelligence', site: 'https://www.cantaycaliskan.net/', photo: CONFIG.creatorPhoto };
+// Kept plain on purpose: who made it, one sentence about him, who is real and who is not, what it is made with, thanks.
+export const CREATOR = { name: 'Cantay Caliskan', site: 'https://www.cantaycaliskan.net/', photo: CONFIG.creatorPhoto };
+const MADE_WITH = 'three.js (MIT licence). Typefaces: Atkinson Hyperlegible, DM Mono and Caveat (SIL Open Font Licence). Octavo’s reading is Lewis Carroll’s “Alice’s Adventures in Wonderland” of 1865, which is in the public domain. All pictures are drawn by the program. All sound is made in your browser.';
 export function credits() {
   sheet('Credits', (p) => {
-    const pic = el('div.portrait', { style: { background: '#2f6f8f', width: '10.5rem', height: '13rem', fontSize: '2.4rem' } }, ['CC', el('small', 'portrait')]);
-    if (CREATOR.photo) { const img = new Image(); img.onload = () => { clear(pic); pic.classList.add('photo'); img.style.cssText = 'width:100%;height:100%;object-fit:cover'; pic.append(img); }; img.src = CREATOR.photo; img.alt = 'Cantay Caliskan'; }
+    const pic = el('div.portrait', { style: { background: '#2f6f8f', width: '7.5rem', height: '9.25rem', fontSize: '2rem' } }, ['CC', el('small', 'portrait')]);
+    if (CREATOR.photo) { const img = new Image(); img.onload = () => { clear(pic); pic.classList.add('photo'); img.style.cssText = 'width:100%;height:100%;object-fit:cover'; pic.append(img); }; img.src = CREATOR.photo; img.alt = CREATOR.name; }
     p.classList.add('credits');
-    p.append(el('div.me', [el('div', [pic, el('div', { style: { marginTop: '0.6rem' } }, el('span.plate', [el('b', 'Cantay Caliskan'), '. Deckle, this year. Not a dramatization.']))]), el('div', [
-      el('p', { style: { fontSize: '1.15em', marginTop: 0 } }, [el('b', CREATOR.name), ', ' + CREATOR.letters + ', made this game.']),
-      el('p', 'He is an ' + CREATOR.title + '. He has taught data science to more than 1,760 students since 2018, which is one reason every puzzle here can be undone.'),
-      el('p', 'His research uses machine learning, networks, language and images to study how people and politics behave, and lately it includes video games. He also runs a summer institute in computational social science, and a research group with ten current members and seventy-five who have moved on.'),
-      el('p', 'He speaks Turkish and German, some French and some Swedish, is learning Arabic, and reports that he cannot speak Latin fluently.'),
+    p.append(el('div.me', [pic, el('div', [
+      el('h3', { style: { marginTop: 0 } }, 'Created by'),
+      el('p', { style: { fontSize: '1.15em', margin: '0 0 0.5rem' } }, el('b', CREATOR.name)),
+      el('p', 'He teaches data science and artificial intelligence, and studies politics and society with computational methods.'),
       el('p', el('a', { href: CREATOR.site, target: '_blank', rel: 'noopener' }, 'cantaycaliskan.net')),
     ])]));
-    p.append(el('h3', 'Field Guide, specimen 000'), el('div.entry', { style: { cursor: 'default', maxWidth: '40rem' } }, [el('h4', 'Caliskan, C. (creator)'), el('p', 'Habitat: lecture halls, office hours, and the platform at Deckle around six in the evening. Identifying marks: a laptop, a plot on the screen, a question about your data. Often found between two fields. Harmless.')]));
-    // one line cannot sort him
-    const cv = el('canvas', { width: 520, height: 300, style: { width: '100%', maxWidth: '32rem', border: '1px solid var(--line2)', borderRadius: '4px', background: '#fff' } }), out = el('p.mono', ''), g = cv.getContext('2d'); let hidden = false, ang = 0.6;
-    const pts = [[0.2, 0.25, 0], [0.3, 0.15, 0], [0.75, 0.8, 0], [0.85, 0.7, 0], [0.2, 0.8, 1], [0.28, 0.72, 1], [0.8, 0.2, 1], [0.72, 0.3, 1]], me = [0.5, 0.5];
-    const draw = () => { g.clearRect(0, 0, 520, 300); g.font = '13px Atkinson, sans-serif'; g.fillStyle = '#4b5a76'; g.fillText('papers about people and politics →', 300, 290); g.save(); g.translate(14, 200); g.rotate(-Math.PI / 2); g.fillText('papers full of code and models →', 0, 0); g.restore();
-      const X = (x) => 40 + x * 440, Y = (y) => 270 - y * 250; let right = 0;
-      if (!hidden) { const nx = Math.cos(ang), ny = Math.sin(ang); g.strokeStyle = '#1c2b4a'; g.lineWidth = 2; g.beginPath(); g.moveTo(X(0.5 - ny), Y(0.5 + nx)); g.lineTo(X(0.5 + ny), Y(0.5 - nx)); g.stroke(); for (const q of pts) if (((q[0] - 0.5) * nx + (q[1] - 0.5) * ny > 0 ? 1 : 0) === q[2]) right++; }
-      else { g.strokeStyle = '#1c2b4a'; g.lineWidth = 2; g.setLineDash([6, 4]); g.beginPath(); g.moveTo(X(0), Y(0.5)); g.lineTo(X(1), Y(0.5)); g.moveTo(X(0.5), Y(0)); g.lineTo(X(0.5), Y(1)); g.stroke(); g.setLineDash([]); right = 8; }
-      for (const q of pts) { g.fillStyle = q[2] ? '#e69f00' : '#0072b2'; g.beginPath(); if (q[2]) g.rect(X(q[0]) - 6, Y(q[1]) - 6, 12, 12); else g.arc(X(q[0]), Y(q[1]), 7, 0, 7); g.fill(); }
-      g.fillStyle = '#b8683f'; g.beginPath(); g.moveTo(X(me[0]), Y(me[1]) - 11); g.lineTo(X(me[0]) + 10, Y(me[1]) + 8); g.lineTo(X(me[0]) - 10, Y(me[1]) + 8); g.closePath(); g.fill(); g.fillStyle = '#1c2b4a'; g.fillText('C. C.', X(me[0]) + 14, Y(me[1]) + 4);
-      out.textContent = hidden ? 'With a hidden layer: 8 of 8 sorted. Output for C. C.: both.' : `One line: ${Math.max(right, 8 - right)} of 8 sorted. Output for C. C.: undecided. Drag to turn the line.`; };
-    cv.addEventListener('pointermove', (e) => { if (e.buttons && !hidden) { const r = cv.getBoundingClientRect(); ang = Math.atan2(-(e.clientY - r.top - r.height / 2), e.clientX - r.left - r.width / 2); draw(); } });
-    p.append(el('h3', 'A perceptron tries to sort him'), el('p', 'Blue circles: political scientists. Orange squares: data scientists. Triangle: the creator of this game.'), cv, out, el('div.row', [el('button.btn', { onclick: (e) => { hidden = !hidden; e.target.textContent = hidden ? 'Take the hidden layer out' : 'Add a hidden layer'; draw(); } }, 'Add a hidden layer')])); draw();
-    p.append(el('h3', 'His row in the loan log'), el('table.data', [el('tr', ['reader', 'title', 'date', 'branch', S().finale?.done ? 'shown' : ''].map((h, i) => el('th' + (i === 4 && !h ? '.blank' : ''), h || ' '))), el('tr', ['R-0001', 'The Missing Variable', 'this year', 'The Stacks', S().finale?.done ? 'no: he wrote it' : ''].map((c) => el('td', c)))]));
-    p.append(el('h3', 'Also in this game'), el('p', 'The people whose work the sessions describe are listed under Sources. The Larch family, the staff of the Common Shelf and every reader are invented. He can be found in person on the platform at Deckle.'));
-    p.append(el('h3', 'Thanks'), el('p', 'To the students who asked “but why?” until the slides got better.'));
-  }, { wide: true });
+    p.append(el('h3', 'The people in the game'), el('p', { style: { maxWidth: '44rem' } }, 'The sessions describe real work by real people. They are listed, with what they published, under Sources. The Larch family, the staff of the Common Shelf and every reader are invented.'));
+    p.append(el('h3', 'Made with'), el('p', { style: { maxWidth: '44rem' } }, MADE_WITH));
+    p.append(el('h3', 'Thanks'), el('p', 'To the students whose questions shaped these sessions.'));
+  });
 }
 
 export function alsoPlay() {
