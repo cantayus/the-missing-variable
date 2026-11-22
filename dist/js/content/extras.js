@@ -165,6 +165,7 @@ export const KITCHEN = [
 ];
 export const HOWTO = [
   ['Walk', 'Click or tap the ground. Drag to turn the view. Scroll or pinch to zoom. Arrow keys and W A S D also work.'],
+  ['You', 'You are the figure in the green ring with “You” over your head. Walk behind a building or under a tree and you show through it in green.'],
   ['Look around', 'Everyone you see can be spoken to, and every animal can be noted. Some will give you a margin note. Some places hide a find for your cabinet.'],
   ['Sample', 'Yellow markers are things to count. Folio helps. Where you choose to count changes what you find.'],
   ['Sit in', 'The blue marker is the session room. A recording tells you about a piece of work and the people who did it.'],

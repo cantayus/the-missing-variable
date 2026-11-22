@@ -2,7 +2,7 @@
 import { el, clear, bus } from './core/util.js';
 import { S, save, reset, load } from './core/save.js';
 import { RNG, hash } from './core/rng.js';
-import { initWorld, loadPlace, setMarkers, removeMarker, onWorld, setAuto, setMotion, setView, worldOK, kitNow, release, pickNearest, snapshot, setSmooth, walkToMark } from './engine/scene.js';
+import { initWorld, loadPlace, setMarkers, removeMarker, onWorld, setAuto, setMotion, setYou, setView, worldOK, kitNow, release, pickNearest, snapshot, setSmooth, walkToMark } from './engine/scene.js';
 import { WATER, BUILT } from './engine/kit.js';
 import { RECIPES, TAGS } from './engine/dioramas.js';
 import { PLACES } from './content/places.js';
@@ -37,7 +37,7 @@ function applySettings() { const st = S().settings; document.documentElement.sty
 function enterPlace(id, o = {}) {
   const s = S(); closeTalk(); s.place = id; s.started = true; G.place = id; G.visit = s.intro['v:' + id] = (s.intro['v:' + id] || 0) + 1; G.samples = (s.samples[id] || []).slice(); G.taken = new Set(); save();
   const hour = o.hour ?? [9.5, 13, 16.5, 19.3][(G.visit - 1) % 4];
-  if (worldOK()) { loadPlace(RECIPES[id], { season: seasonNow(), hour, seed: id, tags: TAGS[id] || [], flags: { finale: !!s.finale?.done }, companions: { folio: true, wren: !!s.wren && id !== 'deckle' } }); setAuto(false); }
+  if (worldOK()) { loadPlace(RECIPES[id], { season: seasonNow(), hour, seed: id, tags: TAGS[id] || [], flags: { finale: !!s.finale?.done }, companions: { folio: true, wren: !!s.wren && id !== 'deckle' } }); setAuto(false); setYou(true); }
   setPatch(id === 'deckle' ? 'home' : seasonNow()); refresh();
   if (!o.quiet) toast(PLACES[id].full + '. ' + PLACES[id].blurb, 5200);
   if (!o.quiet && !s.intro.marks) { s.intro.marks = 1; save(); setTimeout(() => active() && toast('Blue marker: a session to sit in on. Orange marker: travel. The list on the left always has your next step.', 9000), 5600); }
@@ -154,7 +154,7 @@ function postcard() {
 }
 function toTitle() {
   closeTalk(); closeTablet(); closeMap(); document.getElementById('hud-left')?.remove(); document.getElementById('hud-btns')?.remove(); document.getElementById('fallback')?.remove();
-  if (worldOK()) { if (G.place !== 'deckle' || !kitNow()) loadPlace(RECIPES.deckle, { season: seasonNow(), hour: 17.2, seed: 'deckle', tags: TAGS.deckle, flags: { finale: !!S().finale?.done }, companions: { folio: true, wren: false } }); setMarkers([]); setAuto(true); setView({ az: 0.6, pol: 1.02, dist: 96 }); }
+  if (worldOK()) { if (G.place !== 'deckle' || !kitNow()) loadPlace(RECIPES.deckle, { season: seasonNow(), hour: 17.2, seed: 'deckle', tags: TAGS.deckle, flags: { finale: !!S().finale?.done }, companions: { folio: true, wren: false } }); setMarkers([]); setAuto(true); setYou(false); setView({ az: 0.6, pol: 1.02, dist: 96 }); }
   G.place = null;
   showTitle({
     begin: () => { const go = () => { hideTitle(); introLetter(() => enterPlace('deckle', { hour: 9.5 })); }; if (S().started) { if (confirm('Begin again from the start? Your progress on this device will be cleared.')) { reset(); applySettings(); go(); } } else go(); },

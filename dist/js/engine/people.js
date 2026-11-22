@@ -178,6 +178,7 @@ function walker(k, loop, kind = 'adult', o = {}) {
     else if (kind === 'scooter') { const push = Math.max(0, Math.sin(phase * 0.5)) * moving; p.legs[1].rotation.x = push * 0.9; p.shins[1].rotation.x = push * 0.5; }
     else if (kind !== 'wheelchair') { stride(p, phase, (kind === 'runner' ? 0.9 : 0.5) * moving); p.g.position.y = Math.abs(Math.sin(phase)) * 0.035 * moving; }
     if (extra) extra.rotation.x = Math.sin(phase) * 0.25 * moving;
+    if (k.hills.length) g.position.y += k.heightAt(g.position.x, g.position.z);   // up the skirt of a hill, not into it
   });
   return npc;
 }
@@ -185,7 +186,7 @@ function walker(k, loop, kind = 'adult', o = {}) {
 // ---- people who stay put: readers, painters, a busker, tai chi, a gardener ----
 function npc(k, x, z, o = {}) {
   const p = makePerson(k, { kind: o.kind || 'adult', top: o.top, pack: o.pack ?? false, scale: o.scale });
-  const g = p.g; g.position.set(x, o.y || 0, z); let yaw = o.face == null ? k.r.u() * 6.28 : Array.isArray(o.face) ? Math.atan2(o.face[0] - x, o.face[1] - z) : o.face; g.rotation.y = yaw;
+  const g = p.g; g.position.set(x, o.y || k.heightAt(x, z), z); let yaw = o.face == null ? k.r.u() * 6.28 : Array.isArray(o.face) ? Math.atan2(o.face[0] - x, o.face[1] - z) : o.face; g.rotation.y = yaw;
   if (o.pose === 'sit') sit(p); if (o.pose === 'ground') sit(p, true);
   k.g.add(g);
   const rec = register(k, p, { kind: o.kind || 'adult', role: o.role || 'visitor', local: o.local, still: true });

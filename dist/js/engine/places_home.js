@@ -18,8 +18,7 @@ export function deckle(k, flags = {}) {
   k.box(-6, -4.2, 16, 3, 3, { color: C.lime, roof: 'green', win: 'bands' });
   k.plaza(-6, 1.2, 18, 7.6);
   // the glass tower of books
-  k.box(8.5, -14, 4.2, 4.2, 17, { color: 0xb8683f, roof: 'none', win: 'bands', solid: false });
-  k.glass(8.5, -14, 6.4, 6.4, 18.5, { roofColor: C.copper });
+  k.glass(8.5, -14, 6.4, 6.4, 18.5, { roofColor: C.copper, win: 'shelves' });
   k.label('The Stacks', -6, 13, -12);
   // the retrieval aisles where Folio used to work
   k.box(15.5, -17, 7, 4, 3.2, { color: C.concrete, roof: 'solar', win: 'none' });

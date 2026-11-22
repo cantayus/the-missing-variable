@@ -1,7 +1,7 @@
 // The 3D stage: one renderer, an orbit camera the player turns, the walking student, and the things you can walk up to.
 import * as THREE from 'three';
 import { Kit, SEASONS, C, isShared, WATER } from './kit.js';
-import { makePerson, stride } from './people.js';
+import { makePerson, stride, BODY } from './people.js';
 import './animals.js';
 import { scatter, airborne } from './nature.js';
 import { clamp, lerp, el, clear } from '../core/util.js';
@@ -10,7 +10,7 @@ const W = {
   ok: false, renderer: null, scene: null, camera: null, world: null, actors: null, kit: null,
   az: 0.7, pol: 1.0, dist: 122, target: new THREE.Vector3(0, 2, 0), auto: false,
   hour: 9, season: 'fall', handlers: {}, markers: [], labelsEl: null, labelNodes: [],
-  avatar: null, folio: null, wren: null, goal: null, onArrive: null, t: 0, last: 0, motion: true, wind: { value: 0 },
+  avatar: null, folio: null, wren: null, goal: null, onArrive: null, t: 0, last: 0, motion: true, you: null, youOn: true, wind: { value: 0 },
   ray: new THREE.Raycaster(), ground: new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), keys: {}, held: null, stuck: 0,
 };
 
@@ -109,11 +109,32 @@ export function loadPlace(recipe, { season = 'fall', hour = 9, seed = 'x', az, p
   setHour(hour);
   W.az = az ?? 0.75; W.pol = pol ?? 0.98; W.dist = dist ?? W.fit; W.target.set(0, 2, 0);
   W.student = makeStudent(kit); W.avatar = W.student.g; W.avatar.position.set(kit.spawn.x, 0, kit.spawn.z); W.actors.add(W.avatar);
+  W.you = makeYou(W.student); W.actors.add(W.you.g);
   W.folio = companions.folio ? makeFolio() : null; if (W.folio) { W.folio.position.set(kit.spawn.x + 1.4, 0, kit.spawn.z + 1); W.actors.add(W.folio); }
   W.wrenP = companions.wren ? makeWren(kit) : null; W.wren = W.wrenP ? W.wrenP.g : null; if (W.wren) { W.wren.position.set(kit.spawn.x - 1.3, 0, kit.spawn.z + 1.2); W.actors.add(W.wren); }
   kit.player.x = kit.spawn.x; kit.player.z = kit.spawn.z;
   buildLabels(kit);
   return kit;
+}
+// ---- which figure is the player's ----
+// Three things mark the student. A green ring lies on the ground around the feet. A green "You" tag floats over the head; it is HTML, so nothing in the place
+// can stand in front of it. And wherever a building, a tree or another person comes between the camera and the student, the student is drawn there as a flat
+// green shape, so the figure is never lost. The shape is drawn after the place and before the student, and only where something nearer is already in the
+// picture (`depthFunc: GreaterDepth`); the student, drawn last, covers nothing of it. The order is set with `renderOrder`: place 0, ring 8, shapes 9, student 10.
+const YOU = 0x1ec866;
+function makeYou(student) {
+  const behind = { color: YOU, fog: false, depthFunc: THREE.GreaterDepth, depthWrite: false };
+  const shape = new THREE.MeshBasicMaterial({ ...behind, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -8 });   // the offset keeps the soles from showing through the path they stand on
+  const own = []; student.g.traverse((o) => { if (o.isMesh && o.material.visible !== false) own.push(o); });
+  for (const m of own) { m.renderOrder = 10; const s = new THREE.Mesh(m.geometry, shape); s.renderOrder = 9; m.add(s); }
+  const g = new THREE.Group(), flat = (geo) => geo.rotateX(-Math.PI / 2);
+  const band = flat(new THREE.RingGeometry(0.6, 0.84, 48)), ring = new THREE.Mesh(band, new THREE.MeshBasicMaterial({ color: YOU, fog: false }));
+  const rim = new THREE.Mesh(flat(new THREE.RingGeometry(0.84, 0.93, 48)), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
+  const pool = new THREE.Mesh(flat(new THREE.CircleGeometry(0.6, 32)), new THREE.MeshBasicMaterial({ color: YOU, fog: false, transparent: true, opacity: 0.2, depthWrite: false }));
+  const ghost = new THREE.Mesh(band, new THREE.MeshBasicMaterial(behind));
+  ring.renderOrder = 8; rim.renderOrder = 8; ghost.renderOrder = 9; pool.position.y = -0.02;
+  g.add(pool, ring, rim, ghost); g.position.y = 0.09;
+  return { g, shape, tag: null };
 }
 function makeStudent(kit) {
   const p = makePerson(kit, { kind: 'adult', top: 0x24406e, pack: true, scale: 1.04, hat: false });
@@ -140,6 +161,7 @@ function makeWren(kit) {
 function buildLabels(kit) {
   clear(W.labelsEl); W.labelNodes = [];
   for (const L of kit.labels) { const n = el('div.wlabel.' + L.kind, L.text); W.labelsEl.append(n); W.labelNodes.push({ n, p: new THREE.Vector3(L.x, L.y, L.z), kind: L.kind }); }
+  if (W.you) { const n = el('div.wlabel.you', 'You'); W.labelsEl.append(n); W.you.tag = { n, p: new THREE.Vector3(), kind: 'you' }; W.labelNodes.push(W.you.tag); }
 }
 
 // Markers the player can walk to: door (session room), sample spots, talk points.
@@ -148,14 +170,14 @@ export function setMarkers(list) {
   W.labelNodes = W.labelNodes.filter((L) => { if (L.marker) { L.n.remove(); return false; } return true; });
   W.markers = [];
   for (const d of list) {
-    const g = new THREE.Group(); g.position.set(d.x, 0, d.z);
+    const gy = W.kit ? W.kit.heightAt(d.x, d.z) : 0, g = new THREE.Group(); g.position.set(d.x, gy, d.z);
     const col = d.type === 'door' ? 0x7fd8f5 : d.type === 'sample' ? 0xf2c14e : d.type === 'talk' ? 0xf4f2ec : d.type === 'travel' ? 0xff8a3d : 0xcc79a7, big = d.type === 'door' || d.type === 'travel';
     const mat = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 });
     const ring = new THREE.Mesh(new THREE.TorusGeometry(big ? 1.2 : 0.55, 0.07, 6, 24).rotateX(Math.PI / 2), mat); ring.position.y = 0.1; g.add(ring);
     const gem = new THREE.Mesh(new THREE.OctahedronGeometry(big ? 0.42 : 0.24), mat); gem.position.y = big ? 3.4 : 2.3; g.add(gem);
     const hit = new THREE.Mesh(new THREE.CylinderGeometry(big ? 1.6 : 1.1, big ? 1.6 : 1.1, 4, 8), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 2; g.add(hit);
     hit.userData.pick = d; W.actors.add(g); W.markers.push({ obj: g, gem, ring, d, hit, y0: gem.position.y });
-    if (d.label) { const n = el('div.wlabel.marker' + (d.type === 'travel' ? '.travel' : d.type === 'door' ? '.door' : ''), d.label); W.labelsEl.append(n); W.labelNodes.push({ n, p: new THREE.Vector3(d.x, big ? 4.6 : 3.2, d.z), kind: 'marker', marker: g }); }
+    if (d.label) { const n = el('div.wlabel.marker' + (d.type === 'travel' ? '.travel' : d.type === 'door' ? '.door' : ''), d.label); W.labelsEl.append(n); W.labelNodes.push({ n, p: new THREE.Vector3(d.x, gy + (big ? 4.6 : 3.2), d.z), kind: 'marker', marker: g }); }
   }
 }
 export function removeMarker(pred) {
@@ -167,6 +189,7 @@ export function removeMarker(pred) {
 export function onWorld(handlers) { W.handlers = handlers; }
 export function setAuto(v) { W.auto = v; }
 export function setMotion(v) { W.motion = v; }
+export function setYou(v) { W.youOn = v; }   // the ring, the tag and the green shape; off on the title screen
 export function setView({ az, pol, dist }) { if (az != null) W.az = az; if (pol != null) W.pol = pol; if (dist != null) W.dist = dist; }
 export function worldOK() { return W.ok; }
 export function kitNow() { return W.kit; }
@@ -219,8 +242,9 @@ function click(e) {
     else approach(d, d.x != null ? d : { x: hit.point.x, z: hit.point.z }, d.type === 'door' ? 1.0 : 1.3);
     return;
   }
-  const pt = new THREE.Vector3();
-  if (W.ray.ray.intersectPlane(W.ground, pt)) walkTo(pt.x, pt.z);
+  const pt = new THREE.Vector3(), slope = W.kit && W.kit.hills.length ? W.ray.intersectObjects(W.kit.hills.map((h) => h.m), false)[0] : null;   // a click on a hillside means that spot on the hill, not the ground behind it
+  if (slope) walkTo(slope.point.x, slope.point.z);
+  else if (W.ray.ray.intersectPlane(W.ground, pt)) walkTo(pt.x, pt.z);
 }
 // keyboard: walk to the nearest marker, person or animal
 export function pickNearest(type) {
@@ -235,7 +259,13 @@ export function pickNearest(type) {
   approach(best[0], best[1], best[0].type === 'door' ? 1 : 1.5); return true;
 }
 
-function blocked(x, z) { return W.kit.blocked(x, z) || W.kit.mask.get(x, z) === WATER; }
+function blocked(x, z) { return W.kit.blocked(x, z, true) || W.kit.mask.get(x, z) === WATER; }
+// The height of the ground under someone, looked up again only when they have moved.
+function ground(obj) {
+  const p = obj.position, u = obj.userData;
+  if (u.gx !== p.x || u.gz !== p.z) { u.gx = p.x; u.gz = p.z; u.gy = W.kit && W.kit.hills.length ? W.kit.heightAt(p.x, p.z) : 0; }
+  return u.gy;
+}
 function stepActor(obj, tx, tz, speed, dt, stop = 0.05) {
   const dx = tx - obj.position.x, dz = tz - obj.position.z, L = Math.hypot(dx, dz);
   if (L < stop) return 1;
@@ -270,17 +300,24 @@ function loop(now) {
   if (W.kit) { if (W.avatar) { W.kit.player.x = W.avatar.position.x; W.kit.player.z = W.avatar.position.z; } for (const f of W.kit.anim) f(W.t, dt); }
   let walking = false;
   if (W.avatar && W.goal) {
-    const res = stepActor(W.avatar, W.goal.x, W.goal.z, 7.5 * Math.sqrt(W.big || 1), dt, 0.12);   // a longer stride on a bigger slab walking = res === 0;
+    const res = stepActor(W.avatar, W.goal.x, W.goal.z, 7.5 * Math.sqrt(W.big || 1), dt, 0.12); walking = res === 0;   // a longer stride on a bigger slab
     if (res === -1) W.stuck += dt; else W.stuck = Math.max(0, W.stuck - dt);
     const late = W.sure && W.onArrive && performance.now() > W.by;   // a slow machine should not keep anyone waiting for a door
     if (late && !blocked(W.goal.x, W.goal.z)) W.avatar.position.set(W.goal.x, 0, W.goal.z);
     if (res === 1 || W.stuck > 0.5 || late) { const close = res === 1 || Math.hypot(W.goal.x - W.avatar.position.x, W.goal.z - W.avatar.position.z) < 9; W.goal = null; W.stuck = 0; const f = W.onArrive; W.onArrive = null; if (f && (close || W.sure)) f(); else if (W.held) { W.held.paused = false; W.held = null; } }
   }
-  if (W.student) { W.stride = (W.stride || 0) + (walking ? dt * 11 : 0); stride(W.student, W.stride, walking ? 0.6 : 0); W.avatar.position.y = walking ? Math.abs(Math.sin(W.stride)) * 0.05 : 0; }
+  if (W.student) { W.stride = (W.stride || 0) + (walking ? dt * 11 : 0); stride(W.student, W.stride, walking ? 0.6 : 0); W.avatar.position.y = ground(W.avatar) + (walking ? Math.abs(Math.sin(W.stride)) * 0.05 : 0); }
   if (W.avatar) {
     const a = W.avatar.position;
     if (W.folio) { const d = Math.hypot(a.x - W.folio.position.x, a.z - W.folio.position.z); if (d > 2.2) stepActor(W.folio, a.x, a.z, 7.2 * Math.sqrt(W.big || 1), dt, 2); }
-    if (W.wren) { const d = Math.hypot(a.x - W.wren.position.x, a.z - W.wren.position.z), run = d > 2.6; if (run) stepActor(W.wren, a.x, a.z, 7.8 * Math.sqrt(W.big || 1), dt, 2.2); W.wrenStride = (W.wrenStride || 0) + (run ? dt * 15 : 0); stride(W.wrenP, W.wrenStride, run ? 0.7 : 0); W.wren.position.y = run ? Math.abs(Math.sin(W.wrenStride)) * 0.09 : 0; }
+    if (W.wren) { const d = Math.hypot(a.x - W.wren.position.x, a.z - W.wren.position.z), run = d > 2.6; if (run) stepActor(W.wren, a.x, a.z, 7.8 * Math.sqrt(W.big || 1), dt, 2.2); W.wrenStride = (W.wrenStride || 0) + (run ? dt * 15 : 0); stride(W.wrenP, W.wrenStride, run ? 0.7 : 0); W.wren.position.y = ground(W.wren) + (run ? Math.abs(Math.sin(W.wrenStride)) * 0.09 : 0); }
+    if (W.folio) W.folio.position.y = ground(W.folio);
+  }
+  if (W.you && W.avatar) {
+    const a = W.avatar.position, far = clamp(W.dist / 70, 1, 2.4);   // the ring grows as the camera pulls back, so it stays about the same size on the screen
+    W.you.g.visible = W.youOn; W.you.shape.visible = W.youOn;
+    const gy = ground(W.avatar); W.you.g.position.set(a.x, gy + 0.09, a.z); W.you.g.scale.setScalar(far * (W.motion ? 1 + Math.sin(W.t * 2.6) * 0.07 : 1));
+    if (W.you.tag) W.you.tag.p.set(a.x, gy + BODY.top * W.avatar.scale.y + 0.42, a.z);
   }
   for (const m of W.markers) { m.gem.rotation.y = W.t * 1.2; m.gem.position.y = m.y0 + Math.sin(W.t * 1.8 + m.d.x) * 0.12; m.ring.scale.setScalar(1 + Math.sin(W.t * 2 + m.d.z) * 0.05); }
   // zoomed out, the camera looks at the middle of the slab. The closer it comes, the more it keeps the student in the middle instead.
@@ -292,9 +329,22 @@ function loop(now) {
   const w = window.innerWidth, h = window.innerHeight, v = new THREE.Vector3();
   for (const L of W.labelNodes) {
     v.copy(L.p).project(W.camera);
-    const vis = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05 && (L.kind !== 'sign' || W.dist < 84 * (W.big || 1));
-    L.n.style.display = vis ? '' : 'none';
-    if (vis) L.n.style.transform = `translate(-50%,-100%) translate(${((v.x + 1) / 2) * w}px,${((1 - v.y) / 2) * h}px)`;
+    const vis = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05 && (L.kind !== 'sign' || W.dist < 84 * (W.big || 1)) && (L.kind !== 'you' || W.youOn);
+    L.n.style.display = vis ? '' : 'none'; L.vis = vis; L.sx = ((v.x + 1) / 2) * w; L.sy = ((1 - v.y) / 2) * h;
+    if (vis && L.kind !== 'you') L.n.style.transform = `translate(-50%,-100%) translate(${L.sx}px,${L.sy}px)`;
+  }
+  // The "You" tag sits over the student's head. Where it would cover another label there (a door's, most often), it hangs under the ring instead.
+  const Y = W.you && W.you.tag;
+  if (Y && Y.vis) {
+    const size = (L) => { if (!L.w || W.t - L.at > 2) { L.w = L.n.offsetWidth; L.h = L.n.offsetHeight; L.at = W.t; } return L; };   // measured now and then, not every frame
+    size(Y); let under = false;
+    for (const L of W.labelNodes) {
+      if (L === Y || !L.vis || Math.abs(L.sx - Y.sx) > 320 || Math.abs(L.sy - Y.sy) > 90) continue;
+      size(L); if (Math.abs(L.sx - Y.sx) < (L.w + Y.w) / 2 + 4 && Y.sy - 9 > L.sy - L.h - 4 && Y.sy - 9 - Y.h < L.sy + 4) { under = true; break; }
+    }
+    if (under !== Y.under) { Y.under = under; Y.n.classList.toggle('under', under); }
+    if (under) { const a = W.avatar.position, R = 0.93 * W.you.g.scale.x; v.set(a.x + Math.sin(W.az) * R, ground(W.avatar), a.z + Math.cos(W.az) * R).project(W.camera); Y.n.style.transform = `translate(-50%,0) translate(${Y.sx}px,${((1 - v.y) / 2) * h}px)`; }
+    else Y.n.style.transform = `translate(-50%,-100%) translate(${Y.sx}px,${Y.sy}px)`;
   }
   if (W.handlers.onFrame) W.handlers.onFrame(W.t, dt);
 }
@@ -302,7 +352,9 @@ function loop(now) {
 export function pauseWorld(v) { W.paused = v; }
 export function snapshot(maxW = 3840) {
   if (!W.ok) return null;
+  const you = W.you && W.youOn; if (you) { W.you.g.visible = false; W.you.shape.visible = false; }   // a postcard shows the place, not the pointer
   W.renderer.render(W.scene, W.camera);
+  if (you) { W.you.g.visible = true; W.you.shape.visible = true; }
   const src = W.canvas, sc = Math.min(1, maxW / src.width), c = document.createElement('canvas');
   c.width = Math.round(src.width * sc); c.height = Math.round(src.height * sc);
   const g = c.getContext('2d'), grad = g.createLinearGradient(0, 0, 0, c.height), cs = getComputedStyle(document.documentElement);

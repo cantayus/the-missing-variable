@@ -166,7 +166,7 @@ export function mit(k) {
   k.cyl(6, -43, 2.4, 11, { color: 0xb8c2cc, roof: 'flat', roofColor: C.steel, top: 2.9 });
   k.sign(10.5, -27.4, 'Stata Center');
   // the Media Lab: a glass box with colored screens, and Kendall Square's towers behind
-  k.glass(22, -14, 12, 9, 10); for (const [x, c] of [[17.5, 0xd24d3e], [20.5, 0xe2b23a], [23.5, 0x3f7fb5], [26.5, 0x4f9a54]]) { const m = k.mesh(new THREE.BoxGeometry(2.2, 6, 0.1), c, { transparent: true, opacity: 0.7 }); m.position.set(x, 5, -9.3); }
+  k.glass(22, -14, 12, 9, 10); for (const [x, c] of [[17.5, 0xd24d3e], [20.5, 0xe2b23a], [23.5, 0x3f7fb5], [26.5, 0x4f9a54]]) { const m = k.mesh(new THREE.BoxGeometry(2.2, 6, 0.1), c); m.position.set(x, 5, -9.3); }
   k.sign(15.5, -7.6, 'Media Lab');
   k.glass(38, -34, 8, 8, 18); k.box(28, -38, 8, 9, 13, { color: 0xb8c2cc, roof: 'flat', roofColor: C.steel, win: 'bands', plain: true }); k.glass(40, -44, 9, 6, 12); k.label('Kendall Square', 36, 22, -36);
   k.row(-14, 14.5, 12, 14.5, 8); k.grove(-12, -30, 22, 12, 9); k.grove(-42, 14, 8, 4, 4); k.grove(-42, -40, 10, 10, 6); k.row(-26, 20.4, 46, 20.4, 16); k.grove(40, 0, 10, 8, 5);
@@ -189,7 +189,7 @@ export function illinois(k) {
   k.box(24.5, -22, 9, 12, 8, { color: 0xb86b4f, roof: 'solar', win: 'bands' }); k.glass(24.5, -14.6, 6, 3, 9); k.sign(18.8, -15, 'Siebel Center');
   // the old test plots, and the library that went underground so as not to shade them
   k.patch(-24, 18, 8, 9, 0x8a7a4a, 0.03); for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) { const m = k.mesh(new THREE.ConeGeometry(0.22, 1.5, 4), 0xb8b24a); m.position.set(-27 + i * 1.2, 0.75, 15 + j * 1.5); m.castShadow = false; }
-  k.plaza(-24, 7, 9, 8); for (const [x, z] of [[-26, 5], [-22, 5], [-26, 9], [-22, 9]]) { const m = k.mesh(new THREE.BoxGeometry(1.6, 0.4, 1.6), C.glass, { transparent: true, opacity: 0.6 }); m.position.set(x, 0.25, z); }
+  k.plaza(-24, 7, 9, 8); for (const [x, z] of [[-26, 5], [-22, 5], [-26, 9], [-22, 9]]) { const m = k.mesh(new THREE.BoxGeometry(1.6, 0.4, 1.6), C.glass, { roughness: 0.14, metalness: 0.25, envMapIntensity: 1.5 }); m.position.set(x, 0.25, z); }
   egg(k, 'morrow', -24, 12.4, 'post', C.cream);
   k.row(-9.6, -18, -9.6, 18, 8); k.row(9.6, -18, 9.6, 18, 8);
   k.rooms = [{ x: 19, z: -20, label: 'Siebel Center', ids: ['I-8'] }]; k.door = k.rooms[0]; k.spawn = { x: 0, z: 13 };
@@ -228,8 +228,8 @@ export function rensselaer(k) {
   k.box(6, -4, 8, 16, 8, { color: 0xb9ad98, roof: 'gable', roofColor: C.slate, win: 'tall', y: 3 }); k.tower(6, 5.4, 3.2, 14, { color: 0xb9ad98, cap: 'spire', capColor: C.slate });
   const rose = k.mesh(new THREE.CircleGeometry(1.5, 12), 0x4d8fa8, { emissive: 0x2f6f8f, emissiveIntensity: 0.5 }); rose.position.set(6, 9.2, 4.05);
   k.label('Computing Center', 6, 20, -4); egg(k, 'chapel', 9.6, 6.6, 'post', 0x4d8fa8, 3);
-  // the glass arts center with a wooden hull inside it
-  k.glass(19, 10, 11, 9, 9, { y: 2.4 }); const hull = k.mesh(new THREE.IcosahedronGeometry(1, 2), C.wood); hull.scale.set(4, 3, 3); hull.position.set(19, 6.8, 10);
+  // the glass arts center and the wooden hull of its concert hall, which shows here by pushing out through the front
+  k.glass(19, 10, 11, 9, 9, { y: 2.4 }); const hull = k.mesh(new THREE.IcosahedronGeometry(1, 2), C.wood); hull.scale.set(4.2, 3, 3.2); hull.position.set(19, 6.8, 13.2);
   k.box(18, -16, 12, 7, 8, { color: C.brick, roof: 'flat', roofColor: C.dark, win: 'grid', y: 2.6 }); k.box(-2, -20, 9, 6, 7, { color: C.brickDark, roof: 'hip', roofColor: C.slate, y: 2 });
   k.grove(10, 20, 22, 8, 10, ['round', 'cone']); k.grove(-4, -10, 4, 8, 4);
   k.door = { x: 1.2, z: 6.2 }; k.spawn = { x: -10, z: 22 };

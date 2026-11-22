@@ -18,7 +18,9 @@ export function colonnade(k, x, z, w, n, h, { color = C.lime, rot = 0, pediment 
 }
 export function hill(k, x, z, rx, rz, h, color) {
   const m = k.mesh(new THREE.IcosahedronGeometry(1, 2), color ?? k.season.grass); m.scale.set(rx, h, rz); m.position.set(x, -0.05, z); m.castShadow = false;
-  k.obstacles.push({ x0: x - rx * 0.6, x1: x + rx * 0.6, z0: z - rz * 0.6, z1: z + rz * 0.6 }); return m;
+  // Nothing is planted or set down in the middle of a hill. A steep one cannot be walked over either, only round its skirt; a gentle one (Rensselaer's, Bascom Hill) can,
+  // and the door of a session room may stand on top of it. kit.heightAt() says how high the ground stands for whoever is on the slope.
+  k.obstacles.push({ x0: x - rx * 0.6, x1: x + rx * 0.6, z0: z - rz * 0.6, z1: z + rz * 0.6, climb: h / Math.min(rx, rz) <= 0.3 }); k.hills.push({ x, z, rx, rz, h, m }); return m;
 }
 export function fountain(k, x, z, r = 2) {
   k.cyl(x, z, r, 0.5, { color: C.stone, roof: 'none', seg: 16 });

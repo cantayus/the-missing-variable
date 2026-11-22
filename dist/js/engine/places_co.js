@@ -85,7 +85,8 @@ export function apple(k) {
   k.ground();
   // the ring: four storeys of curved glass round a park
   const R = 21, n = 56;
-  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; const m = k.mesh(new THREE.BoxGeometry(2.5, 5.4, 4.6), C.glass, { transparent: true, opacity: 0.66, roughness: 0.12, metalness: 0.25 }); m.position.set(Math.cos(a) * R, 2.7, Math.sin(a) * R); m.rotation.y = -a + Math.PI / 2; m.castShadow = true; }
+  const curved = k.glazing(0.5, 2);
+  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; const m = k.add(new THREE.Mesh(new THREE.BoxGeometry(2.5, 5.4, 4.6), curved)); m.position.set(Math.cos(a) * R, 2.7, Math.sin(a) * R); m.rotation.y = -a + Math.PI / 2; m.castShadow = true; }
   for (let f = 0; f < 4; f++) { const ring = k.mesh(new THREE.TorusGeometry(R, 0.22 + (f === 3 ? 0.2 : 0), 4, 72), 0xf4f2ec); ring.rotation.x = Math.PI / 2; ring.scale.set(1.14, 1.14, 1); ring.position.y = 1.5 + f * 1.36; ring.castShadow = false; }
   const roof = k.mesh(new THREE.RingGeometry(R - 2.4, R + 2.4, 72).rotateX(-Math.PI / 2), 0x34495e, { metalness: 0.4, roughness: 0.35 }); roof.position.y = 5.75;
   k.obstacles.push({ x0: -R - 3, x1: -R + 3, z0: -8, z1: 8 }, { x0: R - 3, x1: R + 3, z0: -8, z1: 8 }, { x0: -8, x1: 8, z0: -R - 3, z1: -R + 3 });
@@ -124,7 +125,7 @@ export function nvidia(k) {
   k.ground();
   // two low buildings, one a triangle and one six-sided, under rolling roofs dotted with triangular skylights
   const roofed = (x, z, r, sides, rot) => {
-    const body = k.mesh(new THREE.CylinderGeometry(r, r, 4.6, sides), C.glass, { transparent: true, opacity: 0.7, roughness: 0.15, metalness: 0.25 }); body.position.set(x, 2.3, z); body.rotation.y = rot;
+    const body = k.add(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 4.6, sides), k.glazing(sides * Math.round((2 * r * Math.sin(Math.PI / sides)) / 5), 1))); body.position.set(x, 2.3, z); body.rotation.y = rot;
     const top = k.mesh(new THREE.CylinderGeometry(r * 1.08, r * 1.12, 0.7, sides), 0xe9e9e6); top.position.set(x, 4.9, z); top.rotation.y = rot;
     const hump = k.mesh(new THREE.SphereGeometry(r * 0.8, sides * 2, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0xe9e9e6); hump.scale.y = 0.22; hump.position.set(x, 5.2, z); hump.rotation.y = rot;
     for (let i = 0; i < 26; i++) { const a = k.r.u() * Math.PI * 2, d = Math.sqrt(k.r.u()) * r * 0.62; const s = k.mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 3), 0x2f4a6b, { metalness: 0.5, roughness: 0.3 }); s.position.set(x + Math.cos(a) * d, 5.36 + (1 - d / r) * r * 0.16, z + Math.sin(a) * d); s.rotation.y = k.r.u() * 2; s.castShadow = false; }
@@ -161,8 +162,8 @@ export function ibm(k) {
   k.ground();
   // a long crescent of glass on a wooded hill, with fieldstone at its back
   hill(k, 0, -10, 34, 20, 3.4);
-  const R = 30, cx = 0, cz = -38;
-  for (let i = 0; i < 26; i++) { const a = Math.PI / 2 - 0.82 + (i / 25) * 1.64; const x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R; const g = k.mesh(new THREE.BoxGeometry(3.5, 6, 2.2), C.glass, { transparent: true, opacity: 0.7, roughness: 0.14, metalness: 0.25 }); g.position.set(x, 5.6, z); g.rotation.y = -a + Math.PI / 2;
+  const R = 30, cx = 0, cz = -38, front = k.glazing(0.75, 1.5);
+  for (let i = 0; i < 26; i++) { const a = Math.PI / 2 - 0.82 + (i / 25) * 1.64; const x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R; const g = k.add(new THREE.Mesh(new THREE.BoxGeometry(3.5, 6, 2.2), front)); g.position.set(x, 5.6, z); g.rotation.y = -a + Math.PI / 2;
     const s = k.mesh(new THREE.BoxGeometry(3.5, 6.6, 2.4), 0x8f8676); s.position.set(cx + Math.cos(a) * (R - 2.2), 5.6, cz + Math.sin(a) * (R - 2.2)); s.rotation.y = -a + Math.PI / 2;
     const rf = k.mesh(new THREE.BoxGeometry(3.7, 0.3, 5.2), C.dark); rf.position.set(cx + Math.cos(a) * (R - 1.1), 8.9, cz + Math.sin(a) * (R - 1.1)); rf.rotation.y = -a + Math.PI / 2; }
   k.obstacles.push({ x0: -12, x1: 12, z0: -12.6, z1: -5.4 }, { x0: -23.4, x1: -11, z0: -20, z1: -8 }, { x0: 11, x1: 23.4, z0: -20, z1: -8 });
@@ -222,11 +223,14 @@ export function belllabs(k) {
 
 export function amazon(k) {
   k.ground();
-  // three glass spheres full of plants, under the office tower beside them
+  // three glass spheres full of plants, under the office tower beside them. Glass is not see-through here, so the plants show as the green in some of the panes.
   for (const [x, z, r] of [[-8, 0, 6], [0, -2, 7.4], [8.4, 0, 6]]) {
-    const s = k.mesh(new THREE.IcosahedronGeometry(r, 1), C.glass, { transparent: true, opacity: 0.42, roughness: 0.1, metalness: 0.3 }); s.position.set(x, r * 0.62, z);
+    const geo = new THREE.IcosahedronGeometry(r, 1), nv = geo.attributes.position.count, tint = new Float32Array(nv * 3), c = new THREE.Color();
+    for (let f = 0; f < nv / 3; f++) { c.set(k.rc.chance(0.42) ? k.rc.pick([0x86cc86, 0xa2d99c, 0x73c088]) : k.rc.pick([0xbfe3f2, 0xcfecf7, 0xb0dbee])); for (let v = 0; v < 3; v++) tint.set([c.r, c.g, c.b], (f * 3 + v) * 3); }
+    geo.setAttribute('color', new THREE.BufferAttribute(tint, 3));
+    const s = k.add(new THREE.Mesh(geo, k.mat(0xffffff, { vertexColors: true, roughness: 0.22, metalness: 0.12, envMapIntensity: 1.4 }))); s.position.set(x, r * 0.62, z);
     const w = k.mesh(new THREE.IcosahedronGeometry(r * 1.005, 1), 0xf4f2ec, { wireframe: true }); w.position.copy(s.position); w.castShadow = false;
-    for (let i = 0; i < 9; i++) { const p = k.mesh(new THREE.IcosahedronGeometry(k.r.range(0.7, 1.4), 1), k.r.pick([0x3f8a58, 0x4f9a54, 0x6bb568, 0x2f7a4a])); p.position.set(x + k.r.range(-r * 0.5, r * 0.5), k.r.range(0.8, r * 0.9), z + k.r.range(-r * 0.5, r * 0.5)); p.castShadow = false; }
+    for (let i = 0; i < 45; i++) k.r.u();   // the plants that used to stand inside took these numbers; drawing them still leaves every tree outside where it was
     k.obstacles.push({ x0: x - r * 0.8, x1: x + r * 0.8, z0: z - r * 0.8, z1: z + r * 0.8 });
   }
   k.label('The Spheres', 0, 16.5, -2);
@@ -330,7 +334,7 @@ export function sf(k) {
   k.water(39.4, 0, 17.2, 96); const pier = k.mesh(new THREE.BoxGeometry(8, 0.4, 2), C.wood); pier.position.set(34, 0.4, 13); k.boat(41, 26, 3, 14, 0.08);
   // Mission Bay: glass buildings joined by skybridges
   for (const [x, z, w, d, h] of [[8, 12, 9, 8, 12], [8, 24, 9, 8, 14], [-3, 18, 8, 12, 10]]) k.glass(x, z, w, d, h, { roofColor: C.dark });
-  for (const [x, z, w, d] of [[8, 18, 2, 4], [2.6, 14, 3, 2], [2.6, 23, 3, 2]]) { const b = k.mesh(new THREE.BoxGeometry(w, 1.6, d), C.glass, { transparent: true, opacity: 0.7 }); b.position.set(x, 7, z); }
+  for (const [x, z, w, d] of [[8, 18, 2, 4], [2.6, 14, 3, 2], [2.6, 23, 3, 2]]) { const b = k.add(new THREE.Mesh(new THREE.BoxGeometry(w, 1.6, d), k.glazing(0.75, 0.5))); b.position.set(x, 7, z); }
   k.sign(1, 10.6, 'Mission Bay'); k.plaza(2, 8, 20, 4);
   // downtown: an office among towers, and one pyramid on the skyline
   for (const [x, z, w, d, h, c] of [[-16, -16, 8, 8, 20, 0xcfc7b8], [-6, -18, 7, 7, 26, 0xb8c2cc], [4, -16, 8, 8, 16, 0xd9d4c8], [-22, -6, 7, 8, 14, 0xb9ab8f], [12, -22, 6, 6, 22, 0xaab4bd]]) k.box(x, z, w, d, h, { color: c, roof: 'flat', roofColor: C.dark, win: 'bands' });

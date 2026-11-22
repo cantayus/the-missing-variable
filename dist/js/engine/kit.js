@@ -85,7 +85,30 @@ function windowTextures(wall, style = 'grid') {
   const bands = style === 'bands', tall = style === 'tall', cols = bands ? 1 : 2, rows = 2, light = col.getHSL({}).l;
   const frame = hex(col.clone().lerp(WHITE, light > 0.8 ? 0.2 : 0.8)), sill = hex(col.clone().multiplyScalar(0.8)), pane = new THREE.Color(0xa6d2ea).lerp(col, 0.1);
   const shut = !bands && light > 0.4 && r.chance(0.55) ? hex(new THREE.Color(r.pick([0x4f9aa0, 0x7fa77a, 0x6f8fb8, 0xc0604c, 0xd9a441, 0x8a78b0]))) : null;
-  for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+  if (style === 'glass' || style === 'shelves') {
+    // A wall of glass, four panes across and two floors up. It is pale and bright and you cannot see through it: a see-through box round a building
+    // read as a wrapper, not as glass. 'shelves' is the tower of books at the Stacks, with the spines standing in rows behind the panes.
+    const books = style === 'shelves', n = 4, pw = S / n, ph = S / 2, base = new THREE.Color(0xa8d6ee).lerp(col, 0.3), SPINES = ['#b8483c', '#d9a441', '#3f6f9a', '#5c8a5a', '#efe3c6', '#7a5586', '#c9743f', '#2f5266'];
+    for (let j = 0; j < 2; j++) for (let i = 0; i < n; i++) {
+      const x = i * pw, y = j * ph, c = base.clone().offsetHSL(0, 0, r.range(-0.03, 0.03)), g = ca.createLinearGradient(0, y, 0, y + ph);
+      g.addColorStop(0, hex(c.clone().lerp(WHITE, 0.36))); g.addColorStop(1, hex(c)); ca.fillStyle = g; ca.fillRect(x, y, pw, ph);
+      if (books) {
+        const rows3 = 3, sh = (ph - 8) / rows3; ca.fillStyle = '#f4ecdc'; ca.fillRect(x, y, pw, ph);
+        for (let q = 0; q < rows3; q++) {
+          const by = y + 5 + (q + 1) * sh; let bx = x + 4;
+          while (bx < x + pw - 7) { const bw = r.range(4, 8), bh = sh * r.range(0.6, 0.86); ca.fillStyle = r.pick(SPINES); ca.fillRect(bx, by - 3 - bh, bw, bh); bx += bw + (r.chance(0.12) ? r.range(3, 8) : 0.7); }
+          ca.fillStyle = '#9a6b47'; ca.fillRect(x, by - 3, pw, 3);
+        }
+        ca.fillStyle = 'rgba(168,214,238,0.24)'; ca.fillRect(x, y, pw, ph);
+      }
+      if (r.chance(books ? 0.3 : 0.6)) { const o = r.range(0, ph * 0.4); ca.save(); ca.beginPath(); ca.rect(x, y, pw, ph); ca.clip(); ca.fillStyle = 'rgba(255,255,255,0.3)'; ca.beginPath(); ca.moveTo(x, y + ph * 0.5 + o); ca.lineTo(x + pw, y + o - ph * 0.1); ca.lineTo(x + pw, y + o + ph * 0.12); ca.lineTo(x, y + ph * 0.72 + o); ca.closePath(); ca.fill(); ca.restore(); }
+      if (!books) { const v = Math.round(r.range(84, 140)); cb.fillStyle = `rgb(${v},${v},${v})`; cb.fillRect(x + 3, y + 4, pw - 6, ph - 8); }   // every pane is lit a little, each to its own degree: lit and dark panes side by side made a chessboard of the wall
+    }
+    ca.fillStyle = books ? '#eadfc8' : '#f7f5ef';
+    for (let i = 0; i <= n; i++) ca.fillRect(i * pw - 2.5, 0, 5, S);
+    for (let j = 0; j <= 2; j++) ca.fillRect(0, j * ph - 3.5, S, 7);
+    if (books) { cb.drawImage(a, 0, 0); cb.fillStyle = 'rgba(0,0,0,0.42)'; cb.fillRect(0, 0, S, S); }   // the shelves are lit from inside, so the books glow in their own colours
+  } else for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
     const cw = S / cols, ch = S / rows, w = bands ? cw : cw * 0.44, h = ch * (tall ? 0.66 : 0.5), x = i * cw + (cw - w) / 2, y = j * ch + (ch - h) / 2 - (bands ? 0 : ch * 0.03), arc = tall ? w / 2 : 0;
     const shape = (g, out = 0) => { g.beginPath(); if (tall) { g.moveTo(x - out, y + h + out); g.lineTo(x - out, y + arc); g.arc(x + w / 2, y + arc, arc + out, Math.PI, 0); g.lineTo(x + w + out, y + h + out); } else g.rect(x - out, y - out, w + out * 2, h + out * 2); g.closePath(); };
     if (!bands) { if (shut) { ca.fillStyle = shut; ca.fillRect(x - 6 - w * 0.3, y + arc, w * 0.3, h - arc); ca.fillRect(x + w + 6, y + arc, w * 0.3, h - arc); } ca.fillStyle = frame; shape(ca, 5); ca.fill(); }
@@ -101,10 +124,11 @@ function windowTextures(wall, style = 'grid') {
     if (r.chance(0.6)) { cb.fillStyle = r.chance(0.5) ? '#fff' : '#bbb'; shape(cb); cb.fill(); }
   }
   const ta = new THREE.CanvasTexture(a), tb = new THREE.CanvasTexture(b);
-  for (const t of [ta, tb]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = t === ta ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; }
+  for (const t of [ta, tb]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = t === ta || style === 'shelves' ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; }
   const out = { map: ta, emissive: tb }; winCache.set(key, out); return out;
 }
 const WHITE = new THREE.Color(0xffffff);
+const _ray = new THREE.Raycaster(), _from = new THREE.Vector3(), _down = new THREE.Vector3(0, -1, 0);
 const DOORS = [0xd9534a, 0x3f7fb5, 0x4f9a64, 0xe2a83a, 0x8a6aa8, 0x2f8f8f, 0xe07b3a, 0xc0567a];
 const ubox = () => NI('ubox', () => new THREE.BoxGeometry(1, 1, 1));
 // a dark roof is lifted towards a dusty blue, so that it sits lighter on the house; a flat one, which shows most of all from above, is lifted further
@@ -184,9 +208,20 @@ export class Kit {
     this.anim = []; this.obstacles = []; this.windowMats = []; this.labels = []; this.picks = []; this.spots = [];
     this.npcs = []; this.fauna = []; this.treeSpots = []; this.lampMats = []; this.waterAreas = []; this.tracks = [];
     this.veg = new Batch(); this.own = [];
-    this.deco = new Batch(); this.glowB = new Batch(); this.houses = []; this.smokers = []; this.rc = new RNG(seed + ':trim'); // trimmings, and their own dice so that nothing else in the place moves
+    this.deco = new Batch(); this.glowB = new Batch(); this.houses = []; this.smokers = []; this.hills = []; this.rc = new RNG(seed + ':trim'); // trimmings, and their own dice so that nothing else in the place moves
     this.door = { x: 0, z: 10 }; this.spawn = { x: 0, z: 22 }; this.size = 60; this.mask = new Mask(60);
     this.player = { x: 0, z: 0 }; this.weather = null; this.tags = [];
+  }
+  // How high the ground stands at a point. The slab is flat and only the hills rise from it. Whoever walks on the skirt of a hill walks up it;
+  // they used to walk into it and be lost from sight. The height is read off the hill itself, by dropping a line on it from above.
+  heightAt(x, z) {
+    let y = 0;
+    for (const h of this.hills) {
+      if (((x - h.x) / h.rx) ** 2 + ((z - h.z) / h.rz) ** 2 >= 1) continue;
+      h.m.updateWorldMatrix(true, false); _ray.set(_from.set(x, 400, z), _down);
+      const hit = _ray.intersectObject(h.m, false)[0]; if (hit && hit.point.y > y) y = hit.point.y;
+    }
+    return y;
   }
   add(mesh, { shadow = true, receive = true } = {}) { mesh.castShadow = shadow; mesh.receiveShadow = receive; this.g.add(mesh); return mesh; }
   mat(color, opts) { return M(color, opts); }
@@ -292,7 +327,10 @@ export class Kit {
     const gm = new THREE.Matrix4().makeRotationY(rot).setPosition(x, y, z), roofC = roofTone(roofColor, roof === 'flat'), rx = Math.max(1, Math.round(w / 5)), ry = Math.max(1, Math.round(h / 4.5));
     const dress = !o.glass && win !== 'none' && roof !== 'none' && y < 0.5 && h >= 2.4, toy = dress && !o.plain && Math.min(w, d) >= 2.4; // a house on the ground; one that may have a door and the rest
     let side, rh = 0;
-    if (win !== 'none' && h >= 2) {
+    if (o.glass) {
+      const panes = (len) => Math.max(1, Math.round(len / 1.25)) / 4, fy = h < 3.4 ? 0.5 : ry, style = win === 'shelves' ? 'shelves' : 'glass';
+      const a = this.glazing(panes(d), fy, style, color), b = this.glazing(panes(w), fy, style, color), top = M(color); side = [a, a, top, top, b, b];
+    } else if (win !== 'none' && h >= 2) {
       const t = windowTextures(color, win);
       const mk = (len) => {
         const map = t.map.clone(), em = t.emissive.clone(), nx = Math.max(1, Math.round(len / 5));
@@ -301,7 +339,7 @@ export class Kit {
         this.windowMats.push(m); return m;
       };
       const a = mk(d), b = mk(w), top = M(color); side = [a, a, top, top, b, b];
-    } else side = M(color, o.glass ? { transparent: true, opacity: 0.6, roughness: 0.08, metalness: 0.3, envMapIntensity: 1.6 } : {});
+    } else side = M(color);
     const body = new THREE.Mesh(G('box', () => new THREE.BoxGeometry(1, 1, 1)), side);
     body.scale.set(w, h, d); body.position.y = h / 2; body.castShadow = true; body.receiveShadow = true; grp.add(body);
     const unit = () => G('box', () => new THREE.BoxGeometry(1, 1, 1));
@@ -335,6 +373,7 @@ export class Kit {
       this._front(gm, w, d, h, win, rx, ry);
       if ((roof === 'gable' || roof === 'hip') && Math.min(w, d) >= 4.5 && this.rc.chance(0.6)) this._dormers(gm, w, d, h, rh, roof, roofC, color);
     } else if (dress && Math.min(w, d) >= 3 && h >= 3) this._front(gm, w, d, h, win, rx, ry, true); // the grander buildings keep to a plain door
+    else if (o.glass && y < 0.5 && h >= 2.4 && w >= 3) this._front(gm, w, d, h, 'glass', rx, ry, true);   // a glass front often stands before the door of the house behind it, so it has one of its own
     this.g.add(grp);
     // what it stands on: exact for a building square to the grid (turned by quarter turns or not at all), a square round it otherwise
     const q = Math.abs(rot) / (Math.PI / 2), quarter = Math.abs(q - Math.round(q)) < 0.01, odd = quarter && Math.round(q) % 2 === 1, rr = Math.max(w, d) / 2;
@@ -402,14 +441,21 @@ export class Kit {
     } finally { this.r = keep; }
     return this;
   }
+  // Glass, for the kit and for a recipe's own shapes: the pattern (four panes across, two floors up) repeats nx by ny times over a face. It glows with the other windows in the evening.
+  glazing(nx = 1, ny = 1, style = 'glass', color = C.glass) {
+    const t = windowTextures(color, style), map = t.map.clone(), em = t.emissive.clone(); map.repeat.set(nx, ny); em.repeat.set(nx, ny); map.needsUpdate = em.needsUpdate = true;
+    const m = new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffd9a0, emissiveIntensity: 0, flatShading: true, roughness: 0.36, metalness: 0.08, envMapIntensity: 1.2 });
+    this.windowMats.push(m); return m;
+  }
   glass(x, z, w, d, h, o = {}) { return this.box(x, z, w, d, h, { color: C.glass, win: 'none', glass: true, roof: 'flat', roofColor: C.steel, plain: true, ...o }); }
   cyl(x, z, r, h, o = {}) {
     const { color = C.stone, roof = 'flat', roofColor = C.roof, seg = 14, y = 0, glass = false, solid = true, top = r } = o;
     const grp = new THREE.Group(); grp.position.set(x, y, z);
     // a round building of any size has windows, a pale band under its roof and a door, unless the recipe says win: 'none'
     const win = o.win ?? (!glass && y < 0.5 && r >= 2.6 && h >= 3.6 && roof !== 'none' ? 'tall' : 'none');
-    let skin = M(color, glass ? { transparent: true, opacity: 0.58, roughness: 0.08, metalness: 0.3, envMapIntensity: 1.6 } : {});
-    if (win !== 'none' && !glass) {
+    let skin = M(color);
+    if (glass) skin = [this.glazing(Math.max(2, Math.round((2 * Math.PI * r) / 5)), h < 3.4 ? 0.5 : Math.max(1, Math.round(h / 4.5)), 'glass', color), M(color), M(color)];
+    else if (win !== 'none') {
       const t = windowTextures(color, win), map = t.map.clone(), em = t.emissive.clone(), nx = Math.max(2, Math.round((2 * Math.PI * r) / 5)), ny = Math.max(1, Math.round(h / 4.5));
       map.repeat.set(nx, ny); em.repeat.set(nx, ny); map.needsUpdate = em.needsUpdate = true;
       const sm = new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffd9a0, emissiveIntensity: 0, flatShading: true, roughness: 0.9 }); this.windowMats.push(sm); skin = [sm, M(color), M(color)];
@@ -427,7 +473,7 @@ export class Kit {
     if (y < 1) this.mask.disc(x, z, r + 0.3, r + 0.3, BUILT);
     return grp;
   }
-  sphere(x, y, z, r, color, o = {}) { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, o.detail ?? 1), M(color, o.glass ? { transparent: true, opacity: 0.5, roughness: 0.1, metalness: 0.3 } : {})); m.position.set(x, y, z); return this.add(m); }
+  sphere(x, y, z, r, color, o = {}) { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, o.detail ?? 1), M(color, o.glass ? { roughness: 0.14, metalness: 0.25, envMapIntensity: 1.5 } : {})); m.position.set(x, y, z); return this.add(m); }
   tower(x, z, w, h, o = {}) {
     const { color = C.stone, cap = 'spire', capColor = C.copper } = o;
     this.box(x, z, w, w, h, { color, roof: 'none', win: 'tall' });
@@ -587,7 +633,8 @@ export class Kit {
     }
     return null;
   }
-  blocked(x, z) { for (const o of this.obstacles) if (!o.soft && x > o.x0 && x < o.x1 && z > o.z0 && z < o.z1) return true; return false; }
+  // onFoot: asked for someone walking, who may cross the middle of a gentle hill, where nothing may be planted
+  blocked(x, z, onFoot = false) { for (const o of this.obstacles) if (!o.soft && !(onFoot && o.climb) && x > o.x0 && x < o.x1 && z > o.z0 && z < o.z1) return true; return false; }
   // ----- railway lines and the ways vehicles run along: nothing is planted on them -----
   track(x1, z1, x2, z2, half = 1.1, rail = true) {
     this.tracks.push({ x1, z1, x2, z2, half, rail });

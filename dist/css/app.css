@@ -25,6 +25,13 @@ body { font-family: var(--ui); color: var(--ink); font-size: calc(1rem * var(--f
 .wlabel.place { font-weight: 700; font-size: 0.8438rem; }
 .wlabel.sign { font-family: var(--hand); font-size: 1.0625rem; background: #f4ecd6; border-color: rgba(120, 90, 50, 0.4); transform-origin: center; }
 .wlabel.marker { background: var(--ink); color: #fff; border: 0; font-size: 0.75rem; } .wlabel.marker.travel { background: #c25a1f; font-weight: 700; font-size: 0.8125rem; z-index: 2; } .wlabel.marker.door { background: #17638a; font-weight: 700; font-size: 0.8125rem; z-index: 3; }
+.wlabel.you { margin-top: -9px; padding: 1px 0.5625rem; border-radius: 999px; background: #0f7d41; color: #fff; border: 2px solid #fff; font-weight: 700; font-size: 0.8125rem; letter-spacing: 0.02em; box-shadow: 0 1px 5px rgba(20, 40, 30, 0.4); z-index: 5; }
+.wlabel.you::before, .wlabel.you::after { content: ''; position: absolute; left: 50%; border-style: solid; border-color: transparent; border-bottom-width: 0; }
+.wlabel.you::before { top: 100%; margin-left: -7px; border-width: 8px 7px 0; border-top-color: #fff; }
+.wlabel.you::after { top: calc(100% - 3px); margin-left: -5px; border-width: 6px 5px 0; border-top-color: #0f7d41; }
+.wlabel.you.under { margin-top: 9px; }
+.wlabel.you.under::before { top: auto; bottom: 100%; border-width: 0 7px 8px; border-top-color: transparent; border-bottom-color: #fff; }
+.wlabel.you.under::after { top: auto; bottom: calc(100% - 3px); border-width: 0 5px 6px; border-top-color: transparent; border-bottom-color: #0f7d41; }
 #ui { position: fixed; inset: 0; pointer-events: none; }
 #ui > * { pointer-events: auto; }
 button, input, select { font: inherit; color: inherit; }

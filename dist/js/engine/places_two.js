@@ -208,7 +208,7 @@ export function ucsd(k) {
   k.ground({ color: k.snowCaps() ? 0xbfc79a : undefined });
   // the library: a concrete stem holding up glass floors that widen as they rise
   k.cyl(0, -6, 3, 5, { color: C.concrete, roof: 'none', seg: 8 });
-  for (let i = 0; i < 5; i++) { const w = [9, 13, 16, 13, 9][i]; const m = k.mesh(new THREE.CylinderGeometry(w * 0.72, w * 0.72, 2.2, 8), i % 2 ? C.concrete : C.glass, i % 2 ? {} : { transparent: true, opacity: 0.7, roughness: 0.15, metalness: 0.2 }); m.position.set(0, 6.1 + i * 2.2, -6); m.rotation.y = Math.PI / 8; }
+  for (let i = 0; i < 5; i++) { const w = [9, 13, 16, 13, 9][i], geo = new THREE.CylinderGeometry(w * 0.72, w * 0.72, 2.2, 8), slab = k.mat(C.concrete); const m = i % 2 ? k.mesh(geo, C.concrete) : k.add(new THREE.Mesh(geo, [k.glazing(8 * Math.max(1, Math.round((w * 0.72 * 0.765) / 5)), 0.5), slab, slab])); m.position.set(0, 6.1 + i * 2.2, -6); m.rotation.y = Math.PI / 8; }
   for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 8; const s = k.mesh(new THREE.BoxGeometry(0.7, 8, 0.7), C.concrete); s.position.set(Math.cos(a) * 5.4, 3.4, -6 + Math.sin(a) * 5.4); s.rotation.z = -Math.cos(a) * 0.6; s.rotation.x = Math.sin(a) * 0.6; }
   k.obstacles.push({ x0: -6, x1: 6, z0: -12, z1: 0 }); k.plaza(0, 4, 18, 9); k.label('Geisel Library', 0, 20, -6);
   // an engineering block with a small house hanging off one corner of its roof

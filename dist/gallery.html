@@ -13,7 +13,7 @@
 <div id="gal"></div>
 <script type="module">
 // A plain viewer for every diorama: gallery.html?place=deckle&season=fall&hour=9
-import { initWorld, loadPlace, onWorld, setAuto, setView } from './js/engine/scene.js';
+import { initWorld, loadPlace, onWorld, setAuto, setView, setYou } from './js/engine/scene.js';
 import { RECIPES, TAGS } from './js/engine/dioramas.js';
 const q = new URLSearchParams(location.search);
 const place = q.get('place') || 'deckle', season = q.get('season') || 'fall', hour = +(q.get('hour') || 10);
@@ -22,7 +22,7 @@ onWorld({ active: () => true });
 const kit = loadPlace(RECIPES[place], { season, hour, seed: place, tags: TAGS[place] || [], companions: { folio: true, wren: q.has('wren') } });
 window.__kit = kit;
 if (q.get('az')) setView({ az: +q.get('az') }); if (q.get('pol')) setView({ pol: +q.get('pol') }); if (q.get('dist')) setView({ dist: +q.get('dist') });
-setAuto(q.has('turn'));
+setAuto(q.has('turn')); setYou(q.has('you'));   // &you shows the player's ring, tag and green shape
 const gal = document.getElementById('gal');
 gal.innerHTML = Object.keys(RECIPES).map((p) => `<a href="?place=${p}&season=${season}&hour=${hour}"${p === place ? ' class="on"' : ''}>${p}</a>`).join(' ');
 window.__ready = true;

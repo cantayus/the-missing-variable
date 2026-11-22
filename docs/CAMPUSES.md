@@ -45,7 +45,7 @@ For each place: the recognisable buildings that are in the model, where they sta
 ### rensselaer — Rensselaer Polytechnic Institute, Troy
 - The campus is on a hill over downtown Troy and the Hudson. The Approach, a granite staircase of 1907, climbs from the city.
 - Voorhees Computing Center is a 1933 seminary chapel, the library from 1960 to 1976, a computing center since 1979. Folsom Library (1976) stands where the seminary was. West Hall, once the Troy Hospital, is the westernmost building.
-- EMPAC is the glass arts center on the brow of the hill. East of the hill: the '86 Field and the Houston Field House. North: Russell Sage Laboratory and the Pittsburgh Building.
+- EMPAC is the glass arts center on the brow of the hill. In life the wooden hull of its concert hall is seen through the glass. Glass is solid in the game, so the hull pushes out through the south front. East of the hill: the '86 Field and the Houston Field House. North: Russell Sage Laboratory and the Pittsburgh Building.
 - Checked: archives.rpi.edu building histories (the Approach, Chapel/Voorhees, West Hall), info.rpi.edu/map, Wikipedia "List of RPI buildings" and "Rensselaer Polytechnic Institute".
 
 ### gottingen — University of Göttingen
@@ -223,7 +223,7 @@ For each place: the recognisable buildings that are in the model, where they sta
 
 ### amazon — Amazon, Seattle
 - The Spheres on Lenora Street between 6th and 7th Avenues, under the Day 1 tower; Doppler and the other towers round about; the dog park; the South Lake Union streetcar. Denny Park and Lake Union to the north; the Space Needle and the monorail to the north-west.
-- The streetcar is closer to the Spheres than in life, and the monorail is drawn as one straight beam.
+- The streetcar is closer to the Spheres than in life, and the monorail is drawn as one straight beam. The plants inside the Spheres show as green panes among the blue, since glass is solid in the game.
 - Checked: Wikipedia "Amazon Spheres" and "Day 1 (building)", Amazon's headquarters tour pages, SAH Archipedia, amazon.jobs on the Seattle campus.
 
 ### netflix — Netflix, Los Gatos

@@ -96,9 +96,11 @@ export function airborne(k) {
         if (d > 0.5) discard; gl_FragColor = vec4(mix(uA, uB, vSeed), uOp * smoothstep(0.5, 0.25, d)); }`,
   });
   const pts = new THREE.Points(g, mat); pts.frustumCulled = false; k.g.add(pts); k.own.push(mat);
-  if (W === 'fog') for (let i = 0; i < 7; i++) {
-    const m = new THREE.Mesh(blob(2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, depthWrite: false })); k.own.push(m.material);
-    const z0 = r.range(-28, 28), y0 = r.range(5, 13), sp = r.range(0.25, 0.6); let x = r.range(-44, 44); m.scale.set(r.range(9, 16), r.range(1.6, 3), r.range(6, 10)); k.g.add(m);
-    k.anim.push((t, dt) => { x += sp * dt; if (x > 52) x = -52; m.position.set(x, y0 + Math.sin(t * 0.2 + i) * 0.6, z0); });
+  // Fog comes in as low white banks drifting between the towers. They are solid, like the clouds: a see-through bank looked like a wrapper round whatever stood behind it.
+  if (W === 'fog') for (let i = 0; i < 6; i++) {
+    const g = new THREE.Group(), n = 3 + (i % 2);
+    for (let j = 0; j < n; j++) { const c = new THREE.Mesh(blob(j % 3), M(0xffffff, { roughness: 1 })); c.position.set(j * 2.4 - n * 1.2, r.range(-0.3, 0.4), r.range(-0.9, 0.9)); c.scale.set(r.range(2.2, 3.4), r.range(0.8, 1.25), r.range(1.6, 2.6)); g.add(c); }
+    const z0 = r.range(-34, 34), y0 = r.range(4.5, 10), sp = r.range(0.25, 0.6); let x = r.range(-44, 44); k.g.add(g);
+    k.anim.push((t, dt) => { x += sp * dt; if (x > 54) x = -54; g.position.set(x, y0 + Math.sin(t * 0.2 + i) * 0.5, z0); });
   }
 }
